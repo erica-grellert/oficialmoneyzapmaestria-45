@@ -1,0 +1,208 @@
+import { supabase } from "@/integrations/supabase/client";
+import { formatPhoneNumber } from "@/utils/countryUtils";
+
+// Rate limiting for login attempts
+const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
+
+const isRateLimited = (email: string): boolean => {
+  const attempts = loginAttempts.get(email);
+  if (!attempts) return false;
+
+  const now = Date.now();
+  if (now - attempts.lastAttempt > LOCKOUT_DURATION) {
+    loginAttempts.delete(email);
+    return false;
+  }
+
+  return attempts.count >= MAX_LOGIN_ATTEMPTS;
+};
+
+const recordLoginAttempt = (email: string, success: boolean) => {
+  const now = Date.now();
+  const attempts = loginAttempts.get(email) || { count: 0, lastAttempt: now };
+
+  if (success) {
+    loginAttempts.delete(email);
+  } else {
+    attempts.count++;
+    attempts.lastAttempt = now;
+    loginAttempts.set(email, attempts);
+
+    // Log failed attempt for security monitoring
+    console.warn("Failed login attempt:", {
+      email: email.substring(0, 3) + "***", // Partially obscured for privacy
+      timestamp: new Date().toISOString(),
+      attemptCount: attempts.count,
+    });
+  }
+};
+
+const sanitizeEmail = (email: string): string => {
+  return email.trim().toLowerCase().substring(0, 254); // RFC 5321 limit
+};
+
+const validateEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 254;
+};
+
+const validatePassword = (password: string): boolean => {
+  return password.length >= 6 && password.length <= 128;
+};
+
+export const loginUser = async (email: string, password: string) => {
+  try {
+    // Sanitize and validate inputs
+    const sanitizedEmail = sanitizeEmail(email);
+
+    if (!validateEmail(sanitizedEmail)) {
+      throw new Error("Email inválido");
+    }
+
+    if (!validatePassword(password)) {
+      throw new Error("Senha deve ter entre 6 e 128 caracteres");
+    }
+
+    // Check rate limiting
+    if (isRateLimited(sanitizedEmail)) {
+      throw new Error(
+        "Muitas tentativas de login. Tente novamente em 15 minutos."
+      );
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: sanitizedEmail,
+      password,
+    });
+
+    if (error) {
+      recordLoginAttempt(sanitizedEmail, false);
+      console.error("AuthService: Login error:", error);
+      throw error;
+    }
+
+    recordLoginAttempt(sanitizedEmail, true);
+
+    return data;
+  } catch (error) {
+    console.error("AuthService: Login error:", error);
+    throw error;
+  }
+};
+
+export const registerUser = async (
+  email: string,
+  password: string,
+  name?: string
+) => {
+  try {
+    // Sanitize and validate inputs
+    const sanitizedEmail = sanitizeEmail(email);
+    const sanitizedName = name ? name.trim().substring(0, 100) : undefined; // Limit name length
+
+    if (!validateEmail(sanitizedEmail)) {
+      throw new Error("Email inválido");
+    }
+
+    if (!validatePassword(password)) {
+      throw new Error("Senha deve ter entre 6 e 128 caracteres");
+    }
+
+    // Use our custom function for auto-confirmed email
+    const { data: functionData, error } = await supabase.functions.invoke(
+      "create-user-account",
+      {
+        body: {
+          email: sanitizedEmail,
+          password,
+          full_name: sanitizedName || sanitizedEmail.split("@")[0],
+          phone: formatPhoneNumber({ dialCode: "55" } as any, ""), // Default to Brazil country code (55) + empty phone
+          country_code: "BR", // Default to Brazil
+        },
+      }
+    );
+
+    if (error) {
+      throw error;
+    }
+
+    if (!functionData || !functionData.success) {
+      throw new Error(functionData?.error || "Failed to create user account");
+    }
+
+    // Since the admin function doesn't return a session, we need to sign in
+    // to get a valid session for the user
+    const { data: signInData, error: signInError } =
+      await supabase.auth.signInWithPassword({
+        email: sanitizedEmail,
+        password,
+      });
+
+    if (signInError) {
+      throw new Error(
+        `Failed to sign in after account creation: ${signInError.message}`
+      );
+    }
+
+    if (!signInData.session) {
+      throw new Error("No session returned after sign in");
+    }
+
+    return {
+      user: functionData.user,
+      session: signInData.session,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const logoutUser = async () => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const resetPassword = async (email: string) => {
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getCurrentSession = async () => {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      throw error;
+    }
+    return data.session;
+  } catch (error) {
+    console.error("AuthService: Error getting session:", error);
+    return null;
+  }
+};
+
+export const setupAuthListener = (callback: (session: any) => void) => {
+  return supabase.auth.onAuthStateChange((_, session) => {
+    callback(session);
+  });
+};

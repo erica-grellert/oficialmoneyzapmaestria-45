@@ -1,0 +1,201 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* MoneyZap Design Tokens */
+    --mz-emerald-50: #ECFDF5;
+    --mz-emerald-600: #10B981;
+    --mz-emerald-700: #059669;
+    --mz-mint-500: #22C7A9;
+    --mz-leaf-500: #63D471;
+    --mz-gray-100: #F3F4F6;
+    --mz-gray-500: #6B7280;
+    --mz-gray-700: #374151;
+    --mz-gray-900: #0F172A;
+    --danger-500: #EF4444;
+    --warn-500: #F59E0B;
+    --info-500: #3B82F6;
+    
+    /* Compatibilidade com sistema existente */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 158 64% 52%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 158 64% 52%;
+  }
+
+
+}
+
+@layer base {
+  * {
+    @apply border-border transition-colors duration-200;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+  
+  /* Force light theme - override any dark mode classes */
+  .dark, [data-theme="dark"] {
+    --background: 0 0% 100% !important;
+    --foreground: 222.2 84% 4.9% !important;
+    --card: 0 0% 100% !important;
+    --card-foreground: 222.2 84% 4.9% !important;
+    --popover: 0 0% 100% !important;
+    --popover-foreground: 222.2 84% 4.9% !important;
+    --primary: 158 64% 52% !important;
+    --primary-foreground: 210 40% 98% !important;
+    --secondary: 210 40% 96% !important;
+    --secondary-foreground: 222.2 84% 4.9% !important;
+    --muted: 210 40% 96% !important;
+    --muted-foreground: 215.4 16.3% 46.9% !important;
+    --accent: 210 40% 96% !important;
+    --accent-foreground: 222.2 84% 4.9% !important;
+    --destructive: 0 84% 60% !important;
+    --destructive-foreground: 210 40% 98% !important;
+    --border: 214.3 31.8% 91.4% !important;
+    --input: 214.3 31.8% 91.4% !important;
+    --ring: 158 64% 52% !important;
+  }
+  
+  /* Force light theme on body and html */
+  html, body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
+  
+  /* Override any dark mode classes that might be applied */
+  .dark\:bg-slate-900,
+  .dark\:bg-slate-800,
+  .dark\:bg-slate-700,
+  .dark\:bg-gray-900,
+  .dark\:bg-gray-800,
+  .dark\:bg-gray-700,
+  .dark\:bg-black {
+    background-color: #ffffff !important;
+  }
+  
+  .dark\:text-white,
+  .dark\:text-slate-100,
+  .dark\:text-slate-200,
+  .dark\:text-slate-300 {
+    color: #0f172a !important;
+  }
+  
+  .dark\:border-slate-700,
+  .dark\:border-slate-600 {
+    border-color: #e2e8f0 !important;
+  }
+  
+  /* Force light theme on all elements */
+  * {
+    color-scheme: light !important;
+  }
+  
+  /* Ensure body and html are always light */
+  html, body, #root {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
+  
+  /* Force light theme on specific page containers */
+  .min-h-screen {
+    background-color: #ffffff !important;
+  }
+  
+
+  
+  /* Override any remaining dark theme classes */
+  [class*="dark:"] {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #e2e8f0 !important;
+  }
+}
+
+@layer components {
+  /* MoneyZap Component Classes */
+  .mz-hero-card {
+    @apply bg-mz-gradient text-white rounded-mz-card p-8 shadow-mz-card relative overflow-hidden;
+  }
+  
+  .mz-card {
+    @apply bg-card rounded-mz-card border border-border shadow-mz-card hover:shadow-mz-card-hover transition-all duration-200;
+  }
+  
+  .mz-chip {
+    @apply inline-flex items-center px-3 py-1 rounded-mz-chip text-sm font-medium border;
+  }
+  
+  .mz-chip-primary {
+    @apply mz-chip bg-mz-emerald-50 text-mz-emerald-700 border-mz-emerald-600/20;
+  }
+  
+  .mz-chip-warn {
+    @apply mz-chip bg-warn-500/10 text-warn-500 border-warn-500/20;
+  }
+  
+  .mz-chip-danger {
+    @apply mz-chip bg-danger-500/10 text-danger-500 border-danger-500/20;
+  }
+  
+  .mz-progress-bar {
+    @apply w-full bg-mz-gray-100 rounded-full h-3 overflow-hidden;
+  }
+  
+  .mz-progress-fill {
+    @apply h-full transition-all duration-500 ease-out;
+  }
+  
+  .mz-btn-primary {
+    @apply bg-mz-gradient text-white hover:opacity-90 transition-all duration-200 rounded-mz-card px-6 py-3 font-medium shadow-mz-card hover:shadow-mz-card-hover hover:-translate-y-0.5;
+  }
+  
+  .mz-timeline-item {
+    @apply mz-card p-4 hover:-translate-y-1;
+  }
+  
+  /* Microinterações */
+  .mz-hover-lift {
+    @apply hover:-translate-y-1 hover:shadow-mz-card-hover transition-all duration-200;
+  }
+  
+  .mz-click-feedback {
+    @apply active:scale-95 transition-transform duration-100;
+  }
+}
+
+/* Animação de confete */
+@keyframes confetti {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
+}
+
+.confetti-animation {
+  animation: confetti 3s ease-out forwards;
+}

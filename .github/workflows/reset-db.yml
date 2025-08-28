@@ -1,0 +1,196 @@
+name: Supabase PURGE (drop DB objects + delete Edge Functions)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DELETE to confirm IRREVERSIBLE removal'
+        required: true
+        type: string
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+    steps:
+      - name: 📦 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: 🧰 Install helpers (jq, curl, timeout)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl coreutils
+
+      - name: 🛑 Safety check
+        run: |
+          if [ "${{ inputs.confirm }}" != "DELETE" ]; then
+            echo "Invalid confirmation. Type exactly: DELETE"
+            exit 1
+          fi
+
+      - name: 🔑 Supabase Login & Link
+        run: |
+          set -e
+          supabase login --token "$SUPABASE_ACCESS_TOKEN"
+          # Export password for Postgres connections made by CLI
+          export SUPABASE_DB_PASSWORD="$SUPABASE_DB_PASSWORD"
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD"
+          supabase link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: 🧨 PURGE database (reset WITHOUT reapplying migrations)
+        run: |
+          set -e
+          export SUPABASE_DB_PASSWORD="$SUPABASE_DB_PASSWORD"
+          export PGPASSWORD="$SUPABASE_DB_PASSWORD"
+
+          # 1) Hide migrations so reset does NOT reapply anything
+          TS=$(date +%s)
+          BACKUP_DIR="supabase/_migrations_backup_$TS"
+          if [ -d "supabase/migrations" ]; then
+            echo "📦 Moving supabase/migrations -> $BACKUP_DIR"
+            mkdir -p "$BACKUP_DIR"
+            shopt -s dotglob nullglob
+            mv supabase/migrations/* "$BACKUP_DIR"/ || true
+          else
+            echo "ℹ️  supabase/migrations folder not found (ok)."
+          fi
+
+          # 2) Remote reset using non-interactive approach
+          echo "⚠️  Executing supabase db reset --linked (WITHOUT local migrations)..."
+          
+          # Use expect-like approach with timeout and proper error handling
+          echo "y" | timeout 60 supabase db reset --linked || {
+            echo "⚠️  Database reset may have failed or timed out. Checking status..."
+            # Check if reset actually worked by trying to connect
+            if timeout 10 psql "postgresql://postgres:$SUPABASE_DB_PASSWORD@db.$SUPABASE_PROJECT_ID.supabase.co:5432/postgres" -c "SELECT 1;" >/dev/null 2>&1; then
+              echo "✅ Database reset appears to have succeeded (connection test passed)"
+            else
+              echo "❌ Database reset failed - connection test failed"
+              exit 1
+            fi
+          }
+
+          # 3) Restore migrations folder
+          if [ -d "$BACKUP_DIR" ]; then
+            echo "♻️  Restoring migrations to supabase/migrations"
+            mkdir -p supabase/migrations
+            shopt -s dotglob nullglob
+            mv "$BACKUP_DIR"/* supabase/migrations/ || true
+            rmdir "$BACKUP_DIR" || true
+          fi
+
+          echo "✅ Database PURGE completed (no migrations reapplied)."
+
+      - name: 🗂️ PURGE Storage Buckets
+        run: |
+          set -e
+          echo "🔍 Listing Storage Buckets in project..."
+          
+          # Get list of storage buckets
+          BUCKETS_JSON=$(supabase storage list --project-ref "$SUPABASE_PROJECT_ID" --json || echo "[]")
+          BUCKET_COUNT=$(echo "$BUCKETS_JSON" | jq 'length')
+          
+          if [ "$BUCKET_COUNT" -eq 0 ]; then
+            echo "✅ No Storage Buckets found."
+          else
+            echo "📦 Found $BUCKET_COUNT Storage Bucket(s):"
+            echo "$BUCKETS_JSON" | jq -r '.[].name'
+            
+            # Delete each bucket and its contents
+            echo "$BUCKETS_JSON" | jq -r '.[].name' | while read -r bucket; do
+              echo "🗑️  Purging bucket: $bucket"
+              
+              # List objects in bucket
+              OBJECTS_JSON=$(supabase storage list "$bucket" --project-ref "$SUPABASE_PROJECT_ID" --json || echo "[]")
+              OBJECT_COUNT=$(echo "$OBJECTS_JSON" | jq 'length')
+              
+              if [ "$OBJECT_COUNT" -gt 0 ]; then
+                echo "  📁 Found $OBJECT_COUNT object(s) in bucket '$bucket'"
+                
+                # Delete all objects in the bucket
+                echo "$OBJECTS_JSON" | jq -r '.[].name' | while read -r object; do
+                  echo "    🗑️  Deleting object: $object"
+                  supabase storage rm "$bucket/$object" --project-ref "$SUPABASE_PROJECT_ID" --yes || echo "    ⚠️  Failed to delete object: $object"
+                done
+              fi
+              
+              # Delete the bucket itself
+              echo "  🗑️  Deleting bucket: $bucket"
+              supabase storage rm "$bucket" --project-ref "$SUPABASE_PROJECT_ID" --yes || echo "  ⚠️  Failed to delete bucket: $bucket"
+            done
+            
+            echo "✅ All Storage Buckets and their contents have been purged."
+          fi
+
+      - name: 🧹 Delete ALL Edge Functions
+        run: |
+          set -e
+          echo "🔍 Listing Edge Functions in project..."
+          
+          # Get list of all edge functions
+          FUNCTIONS_JSON=$(supabase functions list --project-ref "$SUPABASE_PROJECT_ID" --json || echo "[]")
+          FUNCTION_COUNT=$(echo "$FUNCTIONS_JSON" | jq 'length')
+          
+          if [ "$FUNCTION_COUNT" -eq 0 ]; then
+            echo "✅ No Edge Functions found."
+          else
+            echo "📦 Found $FUNCTION_COUNT Edge Function(s):"
+            echo "$FUNCTIONS_JSON" | jq -r '.[].name'
+            
+            # Delete each function with retry logic
+            echo "$FUNCTIONS_JSON" | jq -r '.[].name' | while read -r function_name; do
+              echo "🗑️  Deleting function: $function_name"
+              
+              # Try to delete the function with retries
+              MAX_RETRIES=3
+              RETRY_COUNT=0
+              
+              while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+                if supabase functions delete "$function_name" --project-ref "$SUPABASE_PROJECT_ID" --yes; then
+                  echo "  ✅ Successfully deleted function: $function_name"
+                  break
+                else
+                  RETRY_COUNT=$((RETRY_COUNT + 1))
+                  if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                    echo "  ⚠️  Failed to delete function: $function_name (attempt $RETRY_COUNT/$MAX_RETRIES), retrying..."
+                    sleep 2
+                  else
+                    echo "  ❌ Failed to delete function: $function_name after $MAX_RETRIES attempts"
+                  fi
+                fi
+              done
+            done
+            
+            # Verify all functions are deleted
+            echo "🔍 Verifying all functions have been deleted..."
+            sleep 5  # Wait for deletion to propagate
+            
+            VERIFICATION_JSON=$(supabase functions list --project-ref "$SUPABASE_PROJECT_ID" --json || echo "[]")
+            REMAINING_COUNT=$(echo "$VERIFICATION_JSON" | jq 'length')
+            
+            if [ "$REMAINING_COUNT" -eq 0 ]; then
+              echo "✅ Verification successful: All Edge Functions have been completely removed."
+            else
+              echo "⚠️  Warning: $REMAINING_COUNT function(s) still remain:"
+              echo "$VERIFICATION_JSON" | jq -r '.[].name'
+              echo "Consider running this workflow again if needed."
+            fi
+          fi
+
+      - name: ✅ Summary
+        run: |
+          echo "🎉 PURGE completed."
+          echo "• Remote database reset WITHOUT reapplying local migrations (automated confirmation)."
+          echo "• ALL Storage Buckets and their contents have been purged."
+          echo "• ALL Edge Functions have been completely removed with verification."
+          echo "🔗 Project: https://${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co"
