@@ -15,6 +15,7 @@ import { countries, Country, formatPhoneNumber } from "@/utils/countryUtils";
 import { applyPhoneMask, getPlaceholderText } from "@/utils/phoneUtils";
 import { getPlanTypeFromPriceId } from "@/utils/subscriptionUtils";
 import { usePlanConfig } from "@/hooks/usePlanConfig";
+import { useBrandingConfig } from "@/hooks/useBrandingConfig";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const LoginPage = () => {
   const { t } = usePreferences();
   const { user, isLoading: authLoading } = useAdaptiveContext();
   const { config: planConfig } = usePlanConfig();
+  const { logoUrl, logoAltText } = useBrandingConfig();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -430,8 +432,8 @@ const LoginPage = () => {
           {/* Logo */}
           <div className="text-center mb-8">
             <img
-              src="/lovable-uploads/4ff12418-1fa6-4e2d-9616-60b1a59be0fc.png"
-              alt="MoneyZap Logo"
+              src={logoUrl}
+              alt={logoAltText}
               className="h-24 w-auto mx-auto mb-4"
             />
           </div>
