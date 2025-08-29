@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 import UserProfileDropdown from "@/components/layout/UserProfileDropdown";
 import { useAdaptiveContext } from "@/hooks/useAdaptiveContext";
+import { useBrandingConfig } from "@/hooks/useBrandingConfig";
 
 const navigationItems = [
   { name: "Painel", href: "/dashboard" },
@@ -18,6 +19,7 @@ const navigationItems = [
 const TopBar = () => {
   const location = useLocation();
   const { user, isLoading } = useAdaptiveContext();
+  const { companyName, logoUrl } = useBrandingConfig();
 
   const isActive = (href: string) => {
     if (href === "/") {
@@ -26,15 +28,17 @@ const TopBar = () => {
     return location.pathname.startsWith(href);
   };
 
-  // Debug info - remover depois
-  console.log("TopBar - User:", user);
-  console.log("TopBar - Loading:", isLoading);
-
   return (
     <div className="hidden md:flex items-center justify-between p-4 bg-card/95 backdrop-blur-lg border-b border-border/50 sticky top-0 z-50">
       {/* Logo e Navegação */}
       <div className="flex items-center space-x-8">
-        <div className="font-semibold text-xl text-primary">MoneyZap</div>
+        {logoUrl ? (
+          <img src={logoUrl} alt={companyName} className="w-full h-10" />
+        ) : (
+          <div className="font-semibold text-xl text-primary">
+            {companyName}
+          </div>
+        )}
 
         <nav className="flex items-center space-x-1">
           {navigationItems.map((item) => (
