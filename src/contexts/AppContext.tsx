@@ -186,11 +186,17 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case "ADD_GOAL":
       return { ...state, goals: [...state.goals, action.payload] };
     case "UPDATE_GOAL":
+      console.log(
+        "AppContext: UPDATE_GOAL reducer called with:",
+        action.payload
+      );
+      const updatedGoals = state.goals.map((g) =>
+        g.id === action.payload.id ? action.payload : g
+      );
+      console.log("AppContext: Goals after update:", updatedGoals);
       return {
         ...state,
-        goals: state.goals.map((g) =>
-          g.id === action.payload.id ? action.payload : g
-        ),
+        goals: updatedGoals,
       };
     case "DELETE_GOAL":
       return {
@@ -786,24 +792,38 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
   const updateGoal = async (id: string, goal: Partial<Goal>) => {
     try {
+      // Build update object with proper database field mapping
+      const updateData: any = {};
+
+      if (goal.name !== undefined) updateData.name = goal.name;
+      if (goal.targetAmount !== undefined)
+        updateData.target_amount = goal.targetAmount;
+      if (goal.currentAmount !== undefined)
+        updateData.current_amount = goal.currentAmount;
+      if (goal.startDate !== undefined) updateData.start_date = goal.startDate;
+      if (goal.endDate !== undefined) updateData.end_date = goal.endDate;
+      if (goal.deadline !== undefined) updateData.deadline = goal.deadline;
+      if (goal.color !== undefined) updateData.color = goal.color;
+
       const { data, error } = await supabase
         .from("moneyzap_goals")
-        .update({
-          name: goal.name,
-          target_amount: goal.targetAmount || goal.target_amount,
-          current_amount: goal.currentAmount || goal.current_amount,
-          start_date: goal.startDate || goal.start_date,
-          end_date: goal.endDate || goal.end_date,
-          deadline: goal.deadline,
-          color: goal.color,
-        })
+        .update(updateData)
         .eq("id", id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("AppContext: Database update error:", error);
+        throw error;
+      }
+
       const transformedGoal = transformGoal(data);
+
       dispatch({ type: "UPDATE_GOAL", payload: transformedGoal });
+
+      console.log(
+        "AppContext: Goal updated successfully, dispatched to reducer"
+      );
     } catch (error) {
       console.error("Error updating goal:", error);
       throw error;
