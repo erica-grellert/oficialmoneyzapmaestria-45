@@ -1,27 +1,28 @@
-
-import React, { useState, useEffect } from 'react';
-import { Menu, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { Menu, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { useBrandingConfig } from "@/hooks/useBrandingConfig";
 
 const ModernNavbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('');
+  const [activeSection, setActiveSection] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
+  const { companyName, logoUrl } = useBrandingConfig();
 
   // Scroll detection for navbar background
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 8);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Intersection Observer for active section
   useEffect(() => {
-    const sections = ['funcionalidades', 'app', 'precos'];
+    const sections = ["funcionalidades", "app", "precos"];
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -32,7 +33,7 @@ const ModernNavbar = () => {
       },
       {
         threshold: 0.3,
-        rootMargin: '-88px 0px -50% 0px'
+        rootMargin: "-88px 0px -50% 0px",
       }
     );
 
@@ -51,29 +52,29 @@ const ModernNavbar = () => {
       const elementPosition = element.offsetTop - offset;
       window.scrollTo({
         top: elementPosition,
-        behavior: 'smooth'
+        behavior: "smooth",
       });
     }
     setIsMenuOpen(false);
   };
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
     setIsMenuOpen(false);
   };
 
   const navItems = [
-    { label: 'Funcionalidades', id: 'funcionalidades' },
-    { label: 'App', id: 'app' },
-    { label: 'Preços', id: 'precos' }
+    { label: "Funcionalidades", id: "funcionalidades" },
+    { label: "App", id: "app" },
+    { label: "Preços", id: "precos" },
   ];
 
   return (
-    <nav 
+    <nav
       className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 ${
-        isScrolled 
-          ? 'bg-white/95 border-gray-200' 
-          : 'bg-white/80 border-gray-200/50'
+        isScrolled
+          ? "bg-white/95 border-gray-200"
+          : "bg-white/80 border-gray-200/50"
       } backdrop-blur-md border rounded-full shadow-lg`}
       aria-label="Navegação principal"
     >
@@ -85,7 +86,16 @@ const ModernNavbar = () => {
             onClick={scrollToTop}
             className="text-black font-bold text-lg hover:text-emerald-600 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-white rounded"
           >
-            MoneyZap
+            {/* Logo e Navegação */}
+            <div className="flex items-center space-x-8">
+              {logoUrl ? (
+                <img src={logoUrl} alt={companyName} className="w-full h-10" />
+              ) : (
+                <div className="font-semibold text-xl text-primary">
+                  {companyName}
+                </div>
+              )}
+            </div>
           </button>
 
           {/* Navigation Links */}
@@ -96,10 +106,10 @@ const ModernNavbar = () => {
                 onClick={() => scrollToSection(item.id)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-white text-black ${
                   activeSection === item.id
-                    ? 'border-2 border-emerald-600'
-                    : 'hover:bg-gray-100'
+                    ? "border-2 border-emerald-600"
+                    : "hover:bg-gray-100"
                 }`}
-                aria-current={activeSection === item.id ? 'page' : undefined}
+                aria-current={activeSection === item.id ? "page" : undefined}
               >
                 {item.label}
               </button>
@@ -107,7 +117,11 @@ const ModernNavbar = () => {
           </div>
 
           {/* Botão Entrar */}
-          <Button variant="outline" asChild className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
+          <Button
+            variant="outline"
+            asChild
+            className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+          >
             <Link to="/login">Entrar</Link>
           </Button>
         </div>
@@ -118,11 +132,16 @@ const ModernNavbar = () => {
             onClick={scrollToTop}
             className="text-black font-bold text-lg hover:text-emerald-600 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-white rounded"
           >
-            MoneyZap
+            {companyName}
           </button>
 
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" asChild className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+            >
               <Link to="/login">Entrar</Link>
             </Button>
 
@@ -132,7 +151,11 @@ const ModernNavbar = () => {
               aria-controls="mobile-menu"
               aria-expanded={isMenuOpen}
             >
-              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {isMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
             </button>
           </div>
         </div>
@@ -156,10 +179,10 @@ const ModernNavbar = () => {
                   onClick={() => scrollToSection(item.id)}
                   className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-emerald-400 text-black ${
                     activeSection === item.id
-                      ? 'border-2 border-emerald-600'
-                      : 'hover:bg-gray-100'
+                      ? "border-2 border-emerald-600"
+                      : "hover:bg-gray-100"
                   }`}
-                  aria-current={activeSection === item.id ? 'page' : undefined}
+                  aria-current={activeSection === item.id ? "page" : undefined}
                 >
                   {item.label}
                 </button>
