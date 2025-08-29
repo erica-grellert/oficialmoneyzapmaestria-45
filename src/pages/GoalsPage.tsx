@@ -133,25 +133,30 @@ const GoalsPage = () => {
     // Ordenação
     return filtered.sort((a, b) => {
       switch (sortBy) {
-        case "progress_desc":
+        case "progress_desc": {
           const progressA = (a.currentAmount / a.targetAmount) * 100;
           const progressB = (b.currentAmount / b.targetAmount) * 100;
           return progressB - progressA;
-        case "progress_asc":
+        }
+        case "progress_asc": {
           const progA = (a.currentAmount / a.targetAmount) * 100;
           const progB = (b.currentAmount / b.targetAmount) * 100;
           return progA - progB;
-        case "deadline_asc":
+        }
+        case "deadline_asc": {
           if (!a.endDate && !b.endDate) return 0;
           if (!a.endDate) return 1;
           if (!b.endDate) return -1;
           return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
-        case "remaining_desc":
+        }
+        case "remaining_desc": {
           const remainingA = Math.max(a.targetAmount - a.currentAmount, 0);
           const remainingB = Math.max(b.targetAmount - b.currentAmount, 0);
           return remainingB - remainingA;
-        case "name_asc":
+        }
+        case "name_asc": {
           return a.name.localeCompare(b.name);
+        }
         default:
           return 0;
       }
@@ -228,25 +233,17 @@ const GoalsPage = () => {
     if (amount) {
       // Quick contribution with predefined amount
       try {
-        console.log("Adding quick contribution to goal:", {
-          goalId: goal.id,
-          goalName: goal.name,
-          currentAmount: goal.currentAmount,
-          newAmount: amount,
-          newTotal: goal.currentAmount + amount,
-        });
+        const newCurrentAmount = goal.currentAmount + amount;
 
         // Update the goal's current amount directly
         await updateGoal(goal.id, {
-          currentAmount: goal.currentAmount + amount,
+          currentAmount: newCurrentAmount,
         });
 
-        console.log(
-          "Quick contribution goal updated successfully, refreshing goals..."
-        );
+        console.log("Quick contribution goal updated successfully");
 
-        // Refresh goals to show updated amounts
-        await getGoals();
+        // Don't refresh goals immediately - rely on local state update
+        // Only refresh if there's an error or if needed for consistency
 
         toast({
           title: "Aporte adicionado",
@@ -256,6 +253,8 @@ const GoalsPage = () => {
         });
       } catch (error) {
         console.error("Error adding quick contribution:", error);
+        // If there's an error, refresh goals to ensure consistency
+        await getGoals();
         toast({
           title: "Erro",
           description: "Erro ao adicionar aporte rápido. Tente novamente.",
@@ -285,33 +284,26 @@ const GoalsPage = () => {
         return;
       }
 
+      const newCurrentAmount = goal.currentAmount + amount;
+
       console.log("Adding contribution to goal:", {
         goalId,
         goalName: goal.name,
         currentAmount: goal.currentAmount,
         newAmount: amount,
-        newTotal: goal.currentAmount + amount,
+        newTotal: newCurrentAmount,
       });
 
       // Update the goal's current amount directly
       await updateGoal(goalId, {
-        currentAmount: goal.currentAmount + amount,
+        currentAmount: newCurrentAmount,
       });
 
-      console.log("Goal updated successfully, refreshing goals...");
-
-      // Refresh goals to show updated amounts
-      await getGoals();
-
-      toast({
-        title: "Aporte adicionado",
-        description: `${currency === "USD" ? "$" : "R$"}${amount.toFixed(
-          2
-        )} adicionado à meta ${goal.name}`,
-      });
       setIsContributionModalOpen(false);
     } catch (error) {
       console.error("Error adding contribution:", error);
+      // If there's an error, refresh goals to ensure consistency
+      await getGoals();
       toast({
         title: "Erro",
         description: "Erro ao adicionar aporte. Tente novamente.",
