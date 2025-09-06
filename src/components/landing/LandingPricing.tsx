@@ -43,7 +43,7 @@ const LandingPricing = () => {
         "Painel web",
         "Relatórios",
         "Metas",
-        "Suporte por WhatsApp",
+        "Suporte via WhatsApp",
       ],
       buttonText: "Começar no mensal",
       linkTo: `/login?priceId=${config.prices.monthly.priceId}&planType=monthly`,

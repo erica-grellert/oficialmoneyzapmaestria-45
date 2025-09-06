@@ -1,43 +1,50 @@
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { Save, Loader2, DollarSign, Calculator } from 'lucide-react';
-import { useUserRole } from '@/hooks/useUserRole';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Save, Loader2, DollarSign, Calculator } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const PlanPricingManager: React.FC = () => {
   const { toast } = useToast();
   const { isAdmin, isLoading: roleLoading } = useUserRole();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [formData, setFormData] = useState({
-    planPriceMonthly: '',
-    planPriceAnnual: '',
+    planPriceMonthly: "",
+    planPriceAnnual: "",
+    trialDays: "",
   });
 
   const loadPricingConfig = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('get-admin-settings');
-      
+      const { data, error } = await supabase.functions.invoke(
+        "get-admin-settings"
+      );
+
       if (error) {
-        console.error('Erro ao carregar configurações de preços:', error);
+        console.error("Erro ao carregar configurações de preços:", error);
         return;
       }
-      
+
       if (data?.success && data?.settings) {
         const pricingSettings = data.settings.pricing || {};
         setFormData({
-          planPriceMonthly: String(pricingSettings.plan_price_monthly?.value || ''),
-          planPriceAnnual: String(pricingSettings.plan_price_annual?.value || ''),
+          planPriceMonthly: String(
+            pricingSettings.plan_price_monthly?.value || ""
+          ),
+          planPriceAnnual: String(
+            pricingSettings.plan_price_annual?.value || ""
+          ),
+          trialDays: String(pricingSettings.trial_days?.value || "7"),
         });
       }
     } catch (err) {
-      console.error('Erro ao carregar configurações de preços:', err);
+      console.error("Erro ao carregar configurações de preços:", err);
     } finally {
       setIsLoading(false);
     }
@@ -50,41 +57,49 @@ const PlanPricingManager: React.FC = () => {
   }, [isAdmin]);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   const calculateDiscount = () => {
     if (!formData.planPriceMonthly || !formData.planPriceAnnual) {
-      return '0';
+      return "0";
     }
-    
-    const monthly = parseFloat(String(formData.planPriceMonthly).replace(',', '.'));
-    const annual = parseFloat(String(formData.planPriceAnnual).replace(',', '.'));
-    
+
+    const monthly = parseFloat(
+      String(formData.planPriceMonthly).replace(",", ".")
+    );
+    const annual = parseFloat(
+      String(formData.planPriceAnnual).replace(",", ".")
+    );
+
     if (monthly && annual) {
       const yearlyEquivalent = monthly * 12;
       const discount = ((yearlyEquivalent - annual) / yearlyEquivalent) * 100;
       return discount.toFixed(0);
     }
-    return '0';
+    return "0";
   };
 
   const handleSave = async () => {
     try {
       setIsUpdating(true);
-      
-      const { data, error } = await supabase.functions.invoke('update-admin-settings', {
-        body: {
-          category: 'pricing',
-          updates: {
-            plan_price_monthly: formData.planPriceMonthly,
-            plan_price_annual: formData.planPriceAnnual,
-          }
+
+      const { data, error } = await supabase.functions.invoke(
+        "update-admin-settings",
+        {
+          body: {
+            category: "pricing",
+            updates: {
+              plan_price_monthly: formData.planPriceMonthly,
+              plan_price_annual: formData.planPriceAnnual,
+              trial_days: formData.trialDays,
+            },
+          },
         }
-      });
+      );
 
       if (error) {
         throw error;
@@ -95,15 +110,17 @@ const PlanPricingManager: React.FC = () => {
           title: "Configurações de preços salvas!",
           description: "Os valores dos planos foram atualizados.",
         });
-        
+
         // Recarregar configurações após salvar
         await loadPricingConfig();
       }
     } catch (error: any) {
-      console.error('Erro ao salvar configurações de preços:', error);
+      console.error("Erro ao salvar configurações de preços:", error);
       toast({
         title: "Erro ao salvar",
-        description: error.message || 'Não foi possível salvar as configurações de preços.',
+        description:
+          error.message ||
+          "Não foi possível salvar as configurações de preços.",
         variant: "destructive",
       });
     } finally {
@@ -156,10 +173,19 @@ const PlanPricingManager: React.FC = () => {
           <div className="flex items-start gap-2">
             <DollarSign className="h-5 w-5 text-green-600 mt-0.5" />
             <div>
-              <p className="text-green-800 text-sm font-medium mb-2">💰 Configuração de Preços</p>
+              <p className="text-green-800 text-sm font-medium mb-2">
+                💰 Configuração de Preços e Teste Gratuito
+              </p>
               <div className="text-green-700 text-sm space-y-2">
-                <p>Configure os valores que serão exibidos aos usuários na página de planos.</p>
-                <p><strong>Importante:</strong> Estes valores devem corresponder aos preços configurados no Stripe.</p>
+                <p>
+                  Configure os valores que serão exibidos aos usuários na página
+                  de planos e o período de teste gratuito.
+                </p>
+                <p>
+                  <strong>Importante:</strong> Os preços devem corresponder aos
+                  configurados no Stripe, e os dias de teste devem corresponder
+                  às configurações de trial no Stripe.
+                </p>
               </div>
             </div>
           </div>
@@ -171,7 +197,9 @@ const PlanPricingManager: React.FC = () => {
             <Input
               id="planPriceMonthly"
               value={formData.planPriceMonthly}
-              onChange={(e) => handleInputChange('planPriceMonthly', e.target.value)}
+              onChange={(e) =>
+                handleInputChange("planPriceMonthly", e.target.value)
+              }
               placeholder="29,90"
               disabled={isUpdating}
               type="text"
@@ -179,13 +207,15 @@ const PlanPricingManager: React.FC = () => {
             />
             <p className="text-xs text-gray-500">Valor cobrado mensalmente</p>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="planPriceAnnual">Valor do Plano Anual (R$)</Label>
             <Input
               id="planPriceAnnual"
               value={formData.planPriceAnnual}
-              onChange={(e) => handleInputChange('planPriceAnnual', e.target.value)}
+              onChange={(e) =>
+                handleInputChange("planPriceAnnual", e.target.value)
+              }
               placeholder="177,00"
               disabled={isUpdating}
               type="text"
@@ -195,6 +225,23 @@ const PlanPricingManager: React.FC = () => {
           </div>
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="trialDays">Dias de Teste Gratuito</Label>
+          <Input
+            id="trialDays"
+            value={formData.trialDays}
+            onChange={(e) => handleInputChange("trialDays", e.target.value)}
+            placeholder="0"
+            disabled={isUpdating}
+            type="number"
+            min="0"
+            max="365"
+          />
+          <p className="text-xs text-gray-500">
+            Número de dias para teste gratuito (0 = sem teste)
+          </p>
+        </div>
+
         {formData.planPriceMonthly && formData.planPriceAnnual && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -202,7 +249,16 @@ const PlanPricingManager: React.FC = () => {
               <h4 className="font-medium text-blue-800">Cálculo de Desconto</h4>
             </div>
             <div className="text-blue-700 text-sm space-y-1">
-              <p>Valor mensal × 12: R$ {(parseFloat(String(formData.planPriceMonthly).replace(',', '.')) * 12).toFixed(2).replace('.', ',')}</p>
+              <p>
+                Valor mensal × 12: R${" "}
+                {(
+                  parseFloat(
+                    String(formData.planPriceMonthly).replace(",", ".")
+                  ) * 12
+                )
+                  .toFixed(2)
+                  .replace(".", ",")}
+              </p>
               <p>Valor anual: R$ {formData.planPriceAnnual}</p>
               <p className="font-medium">Desconto anual: {discount}%</p>
             </div>
@@ -211,17 +267,22 @@ const PlanPricingManager: React.FC = () => {
 
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <p className="text-amber-800 text-sm">
-            <strong>Lembre-se:</strong> Após alterar os preços aqui, você também deve:
+            <strong>Lembre-se:</strong> Após alterar os preços ou dias de teste
+            aqui, você também deve:
           </p>
           <ul className="text-amber-700 text-sm mt-2 space-y-1 list-disc list-inside">
             <li>Atualizar os preços no Dashboard do Stripe</li>
+            <li>
+              Configurar o período de trial no Stripe para corresponder aos dias
+              de teste
+            </li>
             <li>Verificar se os Price IDs na seção Stripe estão corretos</li>
-            <li>Testar o fluxo de pagamento</li>
+            <li>Testar o fluxo de pagamento e trial</li>
           </ul>
         </div>
 
         <div className="flex gap-4 pt-4">
-          <Button 
+          <Button
             onClick={handleSave}
             disabled={isUpdating}
             className="flex items-center gap-2"
