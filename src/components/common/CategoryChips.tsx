@@ -17,12 +17,9 @@ export const CategoryChips: React.FC<CategoryChipsProps> = ({
   selectedId,
   className,
 }) => {
-  // Show top 6 most used categories
-  const topCategories = categories.slice(0, 6);
-
   return (
     <div className={cn("flex flex-wrap gap-2", className)}>
-      {topCategories.map((category) => (
+      {categories.map((category) => (
         <Button
           key={category.id}
           type="button"

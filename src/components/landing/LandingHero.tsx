@@ -78,7 +78,7 @@ const LandingHero = () => {
             </div>
             <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 text-white">
               <span className="text-lg">🤝</span>
-              <span className="font-medium">Suporte por WhatsApp</span>
+              <span className="font-medium">Suporte via WhatsApp</span>
             </div>
           </div>
         </motion.div>
