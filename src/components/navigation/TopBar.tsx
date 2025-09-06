@@ -60,17 +60,6 @@ const TopBar = () => {
 
       {/* Ações */}
       <div className="flex items-center gap-2 sm:gap-3">
-        <a
-          href="https://wa.me/5511912921040?text=ol%C3%A1%2C%20quero%20registrar%20minhas%20finan%C3%A7as%20no%20whatsapp"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Usar robô no WhatsApp para registrar finanças"
-          className="inline-flex items-center gap-2 rounded-full bg-gradient-to-b from-emerald-400 via-emerald-500 to-emerald-600 text-white font-semibold shadow-[0_6px_16px_rgba(16,185,129,0.45)] ring-1 ring-emerald-300/60 px-4 h-11 md:px-5 md:h-11 hover:brightness-110 active:translate-y-[1px] transition focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2"
-        >
-          <span className="hidden md:inline">USAR ROBO NO WHATSAPP</span>
-          <span className="md:hidden">ROBO NO WHATSAPP</span>
-        </a>
-
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           <span className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full text-xs"></span>

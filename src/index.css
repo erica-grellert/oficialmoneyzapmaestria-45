@@ -7,16 +7,47 @@
 
 @layer base {
   :root {
-    /* MoneyZap Design Tokens */
-    --mz-emerald-50: #ECFDF5;
-    --mz-emerald-600: #10B981;
-    --mz-emerald-700: #059669;
-    --mz-mint-500: #22C7A9;
-    --mz-leaf-500: #63D471;
-    --mz-gray-100: #F3F4F6;
-    --mz-gray-500: #6B7280;
-    --mz-gray-700: #374151;
-    --mz-gray-900: #0F172A;
+    /* Meu Controle.AI Design Tokens - Yellow + Black Theme */
+    --mz-gold-50: #FFFBEB;
+    --mz-gold-100: #FEF3C7;
+    --mz-gold-200: #FDE68A;
+    --mz-gold-300: #FCD34D;
+    --mz-gold-400: #FBBF24;
+    --mz-gold-500: #EAB308;
+    --mz-gold-600: #CA8A04;
+    --mz-gold-700: #A16207;
+    --mz-gold-800: #854D0E;
+    --mz-gold-900: #713F12;
+    --mz-yellow-50: #FFFBEB;
+    --mz-yellow-100: #FEF3C7;
+    --mz-yellow-200: #FDE68A;
+    --mz-yellow-300: #FCD34D;
+    --mz-yellow-400: #FBBF24;
+    --mz-yellow-500: #EAB308;
+    --mz-yellow-600: #CA8A04;
+    --mz-yellow-700: #A16207;
+    --mz-yellow-800: #854D0E;
+    --mz-yellow-900: #713F12;
+    --mz-black-50: #F8FAFC;
+    --mz-black-100: #F1F5F9;
+    --mz-black-200: #E2E8F0;
+    --mz-black-300: #CBD5E1;
+    --mz-black-400: #94A3B8;
+    --mz-black-500: #64748B;
+    --mz-black-600: #475569;
+    --mz-black-700: #334155;
+    --mz-black-800: #1E293B;
+    --mz-black-900: #0F172A;
+    --mz-dark-50: #F8FAFC;
+    --mz-dark-100: #F1F5F9;
+    --mz-dark-200: #E2E8F0;
+    --mz-dark-300: #CBD5E1;
+    --mz-dark-400: #94A3B8;
+    --mz-dark-500: #64748B;
+    --mz-dark-600: #475569;
+    --mz-dark-700: #334155;
+    --mz-dark-800: #1E293B;
+    --mz-dark-900: #0F172A;
     --danger-500: #EF4444;
     --warn-500: #F59E0B;
     --info-500: #3B82F6;
@@ -28,7 +59,7 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 158 64% 52%;
+    --primary: 45 93% 47%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 84% 4.9%;
@@ -40,7 +71,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 158 64% 52%;
+    --ring: 45 93% 47%;
   }
 
 
@@ -68,7 +99,7 @@
     --card-foreground: 222.2 84% 4.9% !important;
     --popover: 0 0% 100% !important;
     --popover-foreground: 222.2 84% 4.9% !important;
-    --primary: 158 64% 52% !important;
+    --primary: 45 93% 47% !important;
     --primary-foreground: 210 40% 98% !important;
     --secondary: 210 40% 96% !important;
     --secondary-foreground: 222.2 84% 4.9% !important;
@@ -80,7 +111,7 @@
     --destructive-foreground: 210 40% 98% !important;
     --border: 214.3 31.8% 91.4% !important;
     --input: 214.3 31.8% 91.4% !important;
-    --ring: 158 64% 52% !important;
+    --ring: 45 93% 47% !important;
   }
   
   /* Force light theme on body and html */
@@ -153,7 +184,7 @@
   }
   
   .mz-chip-primary {
-    @apply mz-chip bg-mz-emerald-50 text-mz-emerald-700 border-mz-emerald-600/20;
+    @apply mz-chip bg-mz-gold-50 text-mz-gold-700 border-mz-gold-600/20;
   }
   
   .mz-chip-warn {
@@ -165,7 +196,7 @@
   }
   
   .mz-progress-bar {
-    @apply w-full bg-mz-gray-100 rounded-full h-3 overflow-hidden;
+    @apply w-full bg-mz-black-100 rounded-full h-3 overflow-hidden;
   }
   
   .mz-progress-fill {

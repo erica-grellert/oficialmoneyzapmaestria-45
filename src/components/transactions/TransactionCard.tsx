@@ -39,9 +39,9 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
   const { t } = useTranslations();
 
   const isIncome = transaction.type === "income";
-  const amountColor = isIncome ? "text-emerald-600" : "text-red-600";
-  const bgColor = isIncome ? "bg-emerald-50" : "bg-red-50";
-  const borderColor = isIncome ? "border-emerald-200" : "border-red-200";
+  const amountColor = isIncome ? "text-yellow-600" : "text-red-600";
+  const bgColor = isIncome ? "bg-yellow-50" : "bg-red-50";
+  const borderColor = isIncome ? "border-yellow-200" : "border-red-200";
 
   if (compact) {
     return (
@@ -77,7 +77,7 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
                   "text-xs px-2 py-0.5 rounded-full",
                   bgColor,
                   borderColor,
-                  isIncome ? "text-emerald-700" : "text-red-700"
+                  isIncome ? "text-yellow-700" : "text-red-700"
                 )}
               >
                 {transaction.category}
@@ -85,7 +85,7 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
               {transaction.goalId && (
                 <Badge
                   variant="outline"
-                  className="text-xs px-2 py-0.5 border-emerald-200 text-emerald-700"
+                  className="text-xs px-2 py-0.5 border-yellow-200 text-yellow-700"
                 >
                   <Tag className="w-3 h-3 mr-1" />
                   {t("nav.goals")}
@@ -178,7 +178,7 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
                 {transaction.goalId && (
                   <Badge
                     variant="outline"
-                    className="px-2 py-1 border-emerald-200 text-emerald-700"
+                    className="px-2 py-1 border-yellow-200 text-yellow-700"
                   >
                     <Tag className="w-3 h-3 mr-1" />
                     {t("nav.goals")}
@@ -192,7 +192,7 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
                     "text-sm font-medium px-3 py-1.5 rounded-full",
                     bgColor,
                     borderColor,
-                    isIncome ? "text-emerald-700" : "text-red-700"
+                    isIncome ? "text-yellow-700" : "text-red-700"
                   )}
                 >
                   {transaction.category}
@@ -200,7 +200,7 @@ const TransactionCard: React.FC<TransactionCardProps> = ({
 
                 <div className="flex items-center gap-1 text-slate-500">
                   {isIncome ? (
-                    <TrendingUp className="h-4 w-4 text-emerald-500" />
+                    <TrendingUp className="h-4 w-4 text-yellow-500" />
                   ) : (
                     <TrendingDown className="h-4 w-4 text-red-500" />
                   )}

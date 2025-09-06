@@ -73,7 +73,7 @@ const GoalCardV3: React.FC<GoalCardV3Props> = ({
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-slate-900 text-xl truncate pr-2 group-hover:text-emerald-700 transition-colors">
+            <h3 className="font-bold text-slate-900 text-xl truncate pr-2 group-hover:text-mz-gold-700 transition-colors">
               {goal.name}
             </h3>
           </div>
@@ -121,10 +121,10 @@ const GoalCardV3: React.FC<GoalCardV3Props> = ({
         </div>
 
         {/* Financial Summary */}
-        <div className="mb-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+        <div className="mb-6 p-4 bg-mz-gold-50 rounded-2xl border border-mz-gold-100">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 rounded-xl bg-mz-gold-500 flex items-center justify-center shadow-lg">
                 <TrendingUp className="h-5 w-5 text-white" />
               </div>
               <div>
@@ -149,7 +149,7 @@ const GoalCardV3: React.FC<GoalCardV3Props> = ({
             <div
               className={`h-full rounded-full transition-all duration-700 ease-out ${
                 isCompleted
-                  ? "bg-emerald-500"
+                  ? "bg-mz-gold-500"
                   : isOverdue
                   ? "bg-red-500"
                   : "bg-emerald-500"
@@ -159,7 +159,7 @@ const GoalCardV3: React.FC<GoalCardV3Props> = ({
           </div>
 
           <div className="flex items-center justify-between mt-2 text-sm">
-            <span className="text-emerald-600 font-semibold">
+            <span className="text-mz-gold-600 font-semibold">
               {formatCurrency(goal.currentAmount, currency)}
             </span>
             <span className="text-slate-600 font-medium">
@@ -199,7 +199,7 @@ const GoalCardV3: React.FC<GoalCardV3Props> = ({
         {showQuickActions && !isCompleted && (
           <div className="mb-6">
             <div className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+              <div className="w-2 h-2 rounded-full bg-mz-gold-500"></div>
               Aporte rápido
             </div>
             <QuickContributionChips onContribute={handleQuickContribution} />
@@ -211,7 +211,7 @@ const GoalCardV3: React.FC<GoalCardV3Props> = ({
           {!isCompleted && (
             <Button
               onClick={() => onAddContribution(goal)}
-              className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+              className="w-full h-12 bg-mz-gold-500 hover:bg-mz-gold-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
             >
               <Plus className="h-5 w-5 mr-2" />
               Adicionar Aporte
