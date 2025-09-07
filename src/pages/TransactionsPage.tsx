@@ -132,7 +132,7 @@ const TransactionsPage = () => {
                 <div className="flex items-center gap-2 xs:gap-3 flex-shrink-0">
                   <Button
                     onClick={handleAddTransaction}
-                    className="gap-1.5 xs:gap-2 h-9 xs:h-10 sm:h-11 px-3 xs:px-4 sm:px-6 rounded-lg xs:rounded-xl bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all duration-200 text-xs xs:text-sm sm:text-base"
+                    className="gap-1.5 xs:gap-2 h-9 xs:h-10 sm:h-11 px-3 xs:px-4 sm:px-6 rounded-lg xs:rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 text-xs xs:text-sm sm:text-base"
                   >
                     <Plus className="h-3.5 w-3.5 xs:h-4 xs:w-4" />
                     <span className="hidden xs:inline sm:hidden font-medium">

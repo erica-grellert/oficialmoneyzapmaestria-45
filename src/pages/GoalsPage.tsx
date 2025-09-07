@@ -322,8 +322,8 @@ const GoalsPage = () => {
               <div className="flex flex-col gap-3 xs:gap-4 sm:gap-6 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-2 sm:space-y-3 min-w-0 flex-1">
                   <div className="flex items-center gap-2 xs:gap-3 sm:gap-4">
-                    <div className="w-10 h-10 xs:w-12 xs:h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl xs:rounded-2xl sm:rounded-3xl bg-mz-gold-500 flex items-center justify-center shadow-lg flex-shrink-0">
-                      <Target className="h-5 w-5 xs:h-6 xs:w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-white" />
+                    <div className="w-10 h-10 xs:w-12 xs:h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl xs:rounded-2xl sm:rounded-3xl bg-primary flex items-center justify-center shadow-lg flex-shrink-0">
+                      <Target className="h-5 w-5 xs:h-6 xs:w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-primary-foreground" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <h1 className="text-lg xs:text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-slate-900 truncate">
@@ -347,7 +347,7 @@ const GoalsPage = () => {
                   </Button>
                   <Button
                     onClick={handleAddGoal}
-                    className="gap-1.5 xs:gap-2 sm:gap-3 h-9 xs:h-10 sm:h-11 lg:h-12 px-3 xs:px-4 sm:px-6 lg:px-8 rounded-lg xs:rounded-xl sm:rounded-2xl bg-mz-gold-500 hover:bg-mz-gold-600 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold text-white text-xs xs:text-sm sm:text-base"
+                    className="gap-1.5 xs:gap-2 sm:gap-3 h-9 xs:h-10 sm:h-11 lg:h-12 px-3 xs:px-4 sm:px-6 lg:px-8 rounded-lg xs:rounded-xl sm:rounded-2xl bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold text-primary-foreground text-xs xs:text-sm sm:text-base"
                   >
                     <Plus className="h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-5 sm:w-5" />
                     <span className="hidden xs:inline sm:hidden">Nova</span>
@@ -367,16 +367,16 @@ const GoalsPage = () => {
                 {/* Filters Section */}
                 <div className="xl:col-span-1 2xl:col-span-2">
                   <Card className="border border-slate-200 shadow-lg overflow-hidden h-full bg-white">
-                    <div className="bg-mz-gold-50 px-3 xs:px-4 sm:px-6 py-2.5 xs:py-3 sm:py-4 border-b border-mz-gold-100">
+                    <div className="bg-primary/5 px-3 xs:px-4 sm:px-6 py-2.5 xs:py-3 sm:py-4 border-b border-primary/10">
                       <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3">
-                        <div className="w-5 h-5 xs:w-6 xs:h-6 sm:w-8 sm:h-8 rounded-md xs:rounded-lg sm:rounded-xl bg-mz-gold-500 flex items-center justify-center flex-shrink-0">
-                          <Filter className="h-2.5 w-2.5 xs:h-3 xs:w-3 sm:h-4 sm:w-4 text-white" />
+                        <div className="w-5 h-5 xs:w-6 xs:h-6 sm:w-8 sm:h-8 rounded-md xs:rounded-lg sm:rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
+                          <Filter className="h-2.5 w-2.5 xs:h-3 xs:w-3 sm:h-4 sm:w-4 text-primary-foreground" />
                         </div>
                         <span className="font-bold text-xs xs:text-sm sm:text-lg text-slate-800 truncate">
                           Filtros
                         </span>
                         {(statusFilter || searchQuery) && (
-                          <div className="px-1.5 xs:px-2 sm:px-3 py-0.5 xs:py-1 sm:py-1.5 bg-mz-gold-500 text-white rounded-full text-[10px] xs:text-xs sm:text-sm font-semibold flex-shrink-0">
+                          <div className="px-1.5 xs:px-2 sm:px-3 py-0.5 xs:py-1 sm:py-1.5 bg-primary text-primary-foreground rounded-full text-[10px] xs:text-xs sm:text-sm font-semibold flex-shrink-0">
                             Ativos
                           </div>
                         )}
@@ -434,7 +434,7 @@ const GoalsPage = () => {
                 {!statusFilter && !searchQuery && (
                   <Button
                     onClick={handleAddGoal}
-                    className="gap-2 sm:gap-3 h-10 sm:h-12 px-6 sm:px-8 rounded-xl sm:rounded-2xl bg-mz-gold-500 hover:bg-mz-gold-600 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold text-white"
+                    className="gap-2 sm:gap-3 h-10 sm:h-12 px-6 sm:px-8 rounded-xl sm:rounded-2xl bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold text-primary-foreground"
                   >
                     <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
                     Criar Primeira Meta
