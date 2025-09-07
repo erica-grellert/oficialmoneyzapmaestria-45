@@ -27,7 +27,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
       <Button 
         size="lg" 
         onClick={onDeposit}
-        className="h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+        className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
       >
         <ArrowUpRight className="mr-2 h-5 w-5" />
         Depositar

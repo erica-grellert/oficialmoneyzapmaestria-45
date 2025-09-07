@@ -88,12 +88,12 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "var(--mz-gold-600)",
-          foreground: "#FFFFFF",
-          50: "var(--mz-gold-50)",
-          500: "var(--mz-gold-500)",
-          600: "var(--mz-gold-600)",
-          700: "var(--mz-gold-700)",
+          DEFAULT: "var(--mz-black-900)",
+          foreground: "var(--mz-yellow-500)",
+          50: "var(--mz-black-50)",
+          500: "var(--mz-black-500)",
+          600: "var(--mz-black-600)",
+          700: "var(--mz-black-700)",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",

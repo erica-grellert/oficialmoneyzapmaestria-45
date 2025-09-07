@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Crown, ArrowRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SubscriptionGuardProps {
   children: React.ReactNode;
@@ -16,24 +17,106 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
 }) => {
   const { subscription, isLoading } = useSubscription();
   const navigate = useNavigate();
+  const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
+  const [isCheckingUserDate, setIsCheckingUserDate] = useState(true);
+
+  // Fetch user creation date
+  useEffect(() => {
+    const fetchUserCreatedAt = async () => {
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          console.log("SubscriptionGuard: User not authenticated");
+          setIsCheckingUserDate(false);
+          return;
+        }
+
+        // Get user creation date from moneyzap_users table
+        const { data: userData, error: userDataError } = await supabase
+          .from("moneyzap_users")
+          .select("created_at")
+          .eq("id", user.id)
+          .single();
+
+        if (userDataError) {
+          console.error(
+            "SubscriptionGuard: Error fetching user creation date:",
+            userDataError
+          );
+          // Fallback to auth user creation date
+          setUserCreatedAt(user.created_at);
+        } else {
+          setUserCreatedAt(userData.created_at);
+        }
+      } catch (error) {
+        console.error("SubscriptionGuard: Error fetching user data:", error);
+      } finally {
+        setIsCheckingUserDate(false);
+      }
+    };
+
+    fetchUserCreatedAt();
+  }, []);
+
+  // Check if user is within 30-day grace period
+  const isWithinGracePeriod = React.useMemo(() => {
+    if (!userCreatedAt) return false;
+
+    const userCreationDate = new Date(userCreatedAt);
+    const currentDate = new Date();
+    const daysSinceCreation = Math.floor(
+      (currentDate.getTime() - userCreationDate.getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+
+    console.log(
+      "SubscriptionGuard: Days since user creation:",
+      daysSinceCreation
+    );
+    return daysSinceCreation <= 30;
+  }, [userCreatedAt]);
 
   // Verificar se a assinatura está dentro do período válido
   const isSubscriptionValid = React.useMemo(() => {
-    console.log("SubscriptionGuard: Checking subscription validity", subscription);
-    
+    console.log(
+      "SubscriptionGuard: Checking subscription validity",
+      subscription
+    );
+    console.log(
+      "SubscriptionGuard: Is within grace period:",
+      isWithinGracePeriod
+    );
+
+    // If user is within 30-day grace period, allow access regardless of subscription
+    if (isWithinGracePeriod) {
+      console.log(
+        "SubscriptionGuard: User is within grace period, allowing access"
+      );
+      return true;
+    }
+
     if (!subscription) {
       console.log("SubscriptionGuard: No subscription found");
       return false;
     }
 
     if (subscription.status !== "active") {
-      console.log("SubscriptionGuard: Subscription status is not active:", subscription.status);
+      console.log(
+        "SubscriptionGuard: Subscription status is not active:",
+        subscription.status
+      );
       return false;
     }
 
     // Para assinaturas premium, permitir acesso total
     if (subscription.plan_type === "premium") {
-      console.log("SubscriptionGuard: Premium subscription detected, allowing access");
+      console.log(
+        "SubscriptionGuard: Premium subscription detected, allowing access"
+      );
       return true;
     }
 
@@ -54,9 +137,9 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
 
     console.log("SubscriptionGuard: Subscription is valid");
     return true;
-  }, [subscription]);
+  }, [subscription, isWithinGracePeriod]);
 
-  if (isLoading) {
+  if (isLoading || isCheckingUserDate) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -80,6 +163,12 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
                 ? `Para acessar ${feature}, você precisa de uma assinatura ativa do MoneyZap.`
                 : `Sua assinatura expirou. Para continuar acessando ${feature}, você precisa renovar sua assinatura.`}
             </p>
+            {isWithinGracePeriod && (
+              <p className="text-sm text-green-600 bg-green-50 p-3 rounded-lg">
+                Você ainda está no período de teste gratuito de 30 dias após o
+                cadastro.
+              </p>
+            )}
             <div className="space-y-3">
               <Button
                 onClick={() => navigate("/plans")}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,8 +13,6 @@ import { supabase } from "@/integrations/supabase/client";
 import CountrySelector from "@/components/common/CountrySelector";
 import { countries, Country, formatPhoneNumber } from "@/utils/countryUtils";
 import { applyPhoneMask, getPlaceholderText } from "@/utils/phoneUtils";
-import { getPlanTypeFromPriceId } from "@/utils/subscriptionUtils";
-import { usePlanConfig } from "@/hooks/usePlanConfig";
 import { useBrandingConfig } from "@/hooks/useBrandingConfig";
 
 const LoginPage = () => {
@@ -23,7 +21,6 @@ const LoginPage = () => {
   const { toast } = useToast();
   const { t } = usePreferences();
   const { user, isLoading: authLoading } = useAdaptiveContext();
-  const { config: planConfig } = usePlanConfig();
   const { logoUrl, logoAltText } = useBrandingConfig();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,28 +30,9 @@ const LoginPage = () => {
   const [whatsapp, setWhatsapp] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<Country>(countries[0]); // Default to Brazil
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<"monthly" | "annual" | null>(
-    null
-  );
   const [isLoginMode, setIsLoginMode] = useState(true);
 
-  const priceId = searchParams.get("priceId");
-  const planType = searchParams.get("planType");
-
-  useEffect(() => {
-    if (!authLoading && user) {
-      checkUserRoleAndRedirect();
-    }
-  }, [user, authLoading, navigate]);
-
-  // Auto-switch to registration mode if a plan is selected from URL
-  useEffect(() => {
-    if (priceId) {
-      setIsLoginMode(false);
-    }
-  }, [priceId]);
-
-  const checkUserRoleAndRedirect = async () => {
+  const checkUserRoleAndRedirect = useCallback(async () => {
     try {
       console.log("🔍 Starting role check and redirect process...");
 
@@ -158,7 +136,13 @@ const LoginPage = () => {
       console.log("⚠️ Error occurred, redirecting to dashboard as fallback");
       navigate("/dashboard", { replace: true });
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      checkUserRoleAndRedirect();
+    }
+  }, [user, authLoading, checkUserRoleAndRedirect]);
 
   const handleCountryChange = (country: Country) => {
     setSelectedCountry(country);
@@ -305,96 +289,17 @@ const LoginPage = () => {
         // Update authData with the actual session
         authData.session = signInData.session;
 
-        // If there's a plan selected (from URL or user selection), proceed to checkout
-        const finalPlanId =
-          priceId ||
-          (selectedPlan === "monthly"
-            ? planConfig?.prices.monthly.priceId
-            : selectedPlan === "annual"
-            ? planConfig?.prices.annual.priceId
-            : null);
+        // Account created successfully, show success message
+        toast({
+          title: "Conta criada com sucesso!",
+          description:
+            "Sua conta foi criada, confirmada e você foi logado automaticamente.",
+        });
 
-        if (finalPlanId) {
-          toast({
-            title: "Conta criada com sucesso!",
-            description: "Prosseguindo para checkout...",
-          });
-
-          // We already have a valid session from the sign-in above
-          const validSession = authData.session;
-          console.log("✅ Session ready, preparing checkout...");
-
-          // Convert priceId to planType
-          const planType = priceId
-            ? await getPlanTypeFromPriceId(priceId)
-            : selectedPlan;
-
-          if (!planType) {
-            throw new Error("Invalid plan type. Check the configuration.");
-          }
-
-          // Update progress feedback
-          toast({
-            title: "Sessão estabelecida!",
-            description: "Preparando checkout...",
-          });
-
-          // Call Supabase Function to create Stripe checkout session
-          console.log("Calling create-checkout-session with valid session...");
-          const { data: functionData, error: functionError } =
-            await supabase.functions.invoke("create-checkout-session", {
-              body: {
-                planType,
-                successUrl: `${
-                  window.location.origin
-                }/payment-success?email=${encodeURIComponent(
-                  validSession.user.email || ""
-                )}`,
-                cancelUrl: `${window.location.origin}/login?canceled=true`,
-              },
-              headers: {
-                Authorization: `Bearer ${validSession.access_token}`,
-              },
-            });
-
-          if (functionError) {
-            console.error("Error in checkout function:", functionError);
-            throw new Error(`Checkout error: ${functionError.message}`);
-          }
-
-          console.log(
-            "Data returned by create-checkout-session function:",
-            functionData
-          );
-
-          if (functionData && functionData.url) {
-            console.log("Redirecting to:", functionData.url);
-
-            // Ensure loading overlay remains visible
-            document.body.classList.add("overflow-hidden");
-
-            // Add a small delay before redirect to ensure overlay is displayed
-            setTimeout(() => {
-              window.location.href = functionData.url;
-            }, 500);
-
-            return;
-          } else {
-            throw new Error("Could not get checkout URL.");
-          }
-        } else {
-          // No plan selected, just show success message
-          toast({
-            title: "Conta criada com sucesso!",
-            description:
-              "Sua conta foi criada, confirmada e você foi logado automaticamente.",
-          });
-
-          // Since user is already logged in, redirect to dashboard
-          setTimeout(() => {
-            navigate("/dashboard", { replace: true });
-          }, 2000);
-        }
+        // Since user is already logged in, redirect to dashboard
+        setTimeout(() => {
+          navigate("/dashboard", { replace: true });
+        }, 2000);
       } catch (error) {
         console.error("LoginPage: Registration error:", error);
         setIsLoading(false);
@@ -592,80 +497,16 @@ const LoginPage = () => {
                   </div>
                 </div>
 
-                {/* Plan Selection - Only show when no plan is pre-selected */}
-                {!priceId && !isLoginMode && (
-                  <div className="space-y-4">
-                    <Label className="text-sm font-medium text-slate-700">
-                      Selecione seu plano
-                    </Label>
-                    {planConfig ? (
-                      <div className="grid grid-cols-2 gap-3">
-                        <div
-                          className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                            selectedPlan === "monthly"
-                              ? "border-primary bg-primary/5"
-                              : "border-slate-200 hover:border-slate-300"
-                          }`}
-                          onClick={() => setSelectedPlan("monthly")}
-                        >
-                          <div className="text-center">
-                            <div className="text-lg font-semibold text-slate-900">
-                              Mensal
-                            </div>
-                            <div className="text-2xl font-bold text-primary">
-                              R$ {planConfig.prices.monthly.price}
-                            </div>
-                            <div className="text-sm text-slate-600">/mês</div>
-                          </div>
-                        </div>
-                        <div
-                          className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                            selectedPlan === "annual"
-                              ? "border-primary bg-primary/5"
-                              : "border-slate-200 hover:border-slate-300"
-                          }`}
-                          onClick={() => setSelectedPlan("annual")}
-                        >
-                          <div className="text-center">
-                            <div className="text-lg font-semibold text-slate-900">
-                              Anual
-                            </div>
-                            <div className="text-2xl font-bold text-primary">
-                              R$ {planConfig.prices.annual.price}
-                            </div>
-                            <div className="text-sm text-slate-600">/ano</div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                        <span className="ml-2 text-sm text-slate-500">
-                          Carregando planos...
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 <Button
                   type="submit"
-                  className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                  disabled={
-                    isLoading || (!isLoginMode && !priceId && !selectedPlan)
-                  }
+                  className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                  disabled={isLoading}
                 >
                   {isLoading
                     ? "Carregando..."
                     : isLoginMode
                     ? "Entrar na conta"
-                    : priceId
-                    ? "Criar conta e assinar plano"
-                    : selectedPlan
-                    ? `Criar conta e assinar plano ${
-                        selectedPlan === "monthly" ? "Mensal" : "Anual"
-                      }`
-                    : "Selecione um plano"}
+                    : "Criar conta"}
                 </Button>
 
                 {isLoginMode && (
@@ -683,19 +524,17 @@ const LoginPage = () => {
           </Card>
 
           {/* Additional Info */}
-          {!priceId && (
-            <div className="mt-8 text-center">
-              <p className="text-sm text-slate-500">
-                {isLoginMode ? "Não tem uma conta?" : "Já tem uma conta?"}{" "}
-                <button
-                  onClick={() => setIsLoginMode(!isLoginMode)}
-                  className="text-primary hover:text-primary/80 font-medium transition-colors"
-                >
-                  {isLoginMode ? "Criar conta" : "Fazer login"}
-                </button>
-              </p>
-            </div>
-          )}
+          <div className="mt-8 text-center">
+            <p className="text-sm text-slate-500">
+              {isLoginMode ? "Não tem uma conta?" : "Já tem uma conta?"}{" "}
+              <button
+                onClick={() => setIsLoginMode(!isLoginMode)}
+                className="text-primary hover:text-primary/80 font-medium transition-colors"
+              >
+                {isLoginMode ? "Criar conta" : "Fazer login"}
+              </button>
+            </p>
+          </div>
 
           {/* Features */}
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
