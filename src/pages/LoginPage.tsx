@@ -21,7 +21,7 @@ const LoginPage = () => {
   const { toast } = useToast();
   const { t } = usePreferences();
   const { user, isLoading: authLoading } = useAdaptiveContext();
-  const { logoUrl, logoAltText } = useBrandingConfig();
+  const { logoUrl } = useBrandingConfig();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -31,6 +31,8 @@ const LoginPage = () => {
   const [selectedCountry, setSelectedCountry] = useState<Country>(countries[0]); // Default to Brazil
   const [showPassword, setShowPassword] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(true);
+  const [isLogoLoading, setIsLogoLoading] = useState(true);
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   const checkUserRoleAndRedirect = useCallback(async () => {
     try {
@@ -42,12 +44,9 @@ const LoginPage = () => {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        console.log("❌ No authenticated user found, redirecting to dashboard");
         navigate("/dashboard", { replace: true });
         return;
       }
-
-      console.log("👤 Authenticated user:", { id: user.id, email: user.email });
 
       // Add a safety check - if this is a new user or we can't determine role, default to dashboard
       // This prevents any potential issues with role checking from redirecting to admin
@@ -69,11 +68,6 @@ const LoginPage = () => {
         .single();
 
       if (userError) {
-        console.error("❌ Error fetching user role:", userError);
-        // If we can't determine the role, default to regular user for safety
-        console.log(
-          "⚠️ Could not determine user role, redirecting to dashboard for safety"
-        );
         navigate("/dashboard", { replace: true });
         return;
       }
@@ -89,19 +83,6 @@ const LoginPage = () => {
         return;
       }
 
-      // Debug: Log all the data we're working with
-      console.log("🔍 Debug info:", {
-        userRole: userData.role,
-        userEmail: userData.email,
-        userName: userData.name,
-        userId: user.id,
-        authUserEmail: user.email,
-        isRoleAdmin: userData.role === "admin",
-        hasEmail: !!userData.email,
-        hasName: !!userData.name,
-        emailValid: userData.email?.includes("@"),
-      });
-
       // Extra safety check - only allow admin redirect for very specific cases
       // This prevents any potential bugs from incorrectly identifying users as admin
       const isDefinitelyAdmin =
@@ -110,24 +91,10 @@ const LoginPage = () => {
         userData.name &&
         userData.email.includes("@"); // Basic email validation
 
-      console.log("🎯 Admin check result:", {
-        isDefinitelyAdmin,
-        roleCheck: userData.role === "admin",
-        emailCheck: !!userData.email,
-        nameCheck: !!userData.name,
-        emailValidCheck: userData.email?.includes("@"),
-      });
-
       // Check if user is admin and redirect accordingly
       if (isDefinitelyAdmin) {
-        console.log(
-          "👑 User is confirmed admin, redirecting to admin dashboard"
-        );
         navigate("/admin", { replace: true });
       } else {
-        console.log(
-          "👤 User is regular user or admin check failed, redirecting to dashboard"
-        );
         navigate("/dashboard", { replace: true });
       }
     } catch (error) {
@@ -143,6 +110,23 @@ const LoginPage = () => {
       checkUserRoleAndRedirect();
     }
   }, [user, authLoading, checkUserRoleAndRedirect]);
+
+  // Check URL parameters for mode=register to automatically switch to register tab
+  useEffect(() => {
+    const mode = searchParams.get("mode");
+    if (mode === "register") {
+      setIsLoginMode(false);
+    }
+  }, [searchParams]);
+
+  // Page loading with 500ms delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsPageLoading(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleCountryChange = (country: Country) => {
     setSelectedCountry(country);
@@ -172,10 +156,19 @@ const LoginPage = () => {
     );
   };
 
-  if (authLoading) {
+  // Full page loading overlay
+  if (authLoading || isPageLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary border-t-transparent"></div>
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-slate-800 mb-2">
+              Meu Controle.IA
+            </h2>
+            <p className="text-sm text-slate-600">Carregando...</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -336,11 +329,13 @@ const LoginPage = () => {
         <div className="max-w-md mx-auto">
           {/* Logo */}
           <div className="text-center mb-8">
-            <img
-              src={logoUrl}
-              alt={logoAltText}
-              className="h-24 w-auto mx-auto mb-4"
-            />
+            <div className="relative h-24 w-auto mx-auto mb-4">
+              {/* Actual logo */}
+              <img
+                src={logoUrl}
+                className={`h-24 w-auto mx-auto transition-opacity duration-300`}
+              />
+            </div>
           </div>
 
           {/* Error Display */}
