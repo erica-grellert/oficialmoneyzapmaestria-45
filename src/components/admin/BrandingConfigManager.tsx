@@ -282,7 +282,7 @@ const BrandingConfigManager: React.FC = () => {
                     companyName: e.target.value,
                   }))
                 }
-                placeholder="MoneyZap"
+                placeholder="Meu Controle IA"
                 disabled={isUpdating}
               />
             </div>
@@ -297,7 +297,7 @@ const BrandingConfigManager: React.FC = () => {
                     companyDescription: e.target.value,
                   }))
                 }
-                placeholder="Ex: Gerencie suas finanças com o MoneyZap"
+                placeholder="Ex: Gerencie suas finanças com o Meu Controle IA"
                 disabled={isUpdating}
               />
             </div>
@@ -351,7 +351,7 @@ const BrandingConfigManager: React.FC = () => {
                     logoAltText: e.target.value,
                   }))
                 }
-                placeholder="Logo da empresa MoneyZap"
+                placeholder="Logo da empresa"
                 disabled={isUpdating}
               />
             </div>

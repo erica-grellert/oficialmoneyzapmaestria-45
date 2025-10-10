@@ -17,9 +17,9 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "masked-icon.svg"],
       manifest: {
-        name: "MoneyZap",
-        short_name: "MoneyZap",
-        description: "Gerencie suas finanças com MoneyZap",
+        name: "Meu Controle IA",
+        short_name: "Meu Controle IA",
+        description: "Gerencie suas finanças com Meu Controle IA",
         theme_color: "#000000",
         background_color: "#ffffff",
         display: "standalone",
