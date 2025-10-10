@@ -222,7 +222,6 @@ const CleanDashboard = () => {
           <FloatingActionButton />
         </div>
 
-        {/* Transaction Form Modal - Using new MoneyZap Modal v2 */}
         <TransactionFormV2
           open={transactionFormOpen}
           onOpenChange={setTransactionFormOpen}

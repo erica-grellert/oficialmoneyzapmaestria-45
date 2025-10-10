@@ -19,6 +19,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
   const navigate = useNavigate();
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
   const [isCheckingUserDate, setIsCheckingUserDate] = useState(true);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   // Fetch user creation date
   useEffect(() => {
@@ -34,6 +35,9 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
           setIsCheckingUserDate(false);
           return;
         }
+
+        // Set user email for admin check
+        setUserEmail(user.email);
 
         // Get user creation date from moneyzap_users table
         const { data: userData, error: userDataError } = await supabase
@@ -62,6 +66,19 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
     fetchUserCreatedAt();
   }, []);
 
+  // Check if user is an admin (bypass subscription requirements)
+  const isAdminUser = React.useMemo(() => {
+    if (!userEmail) return false;
+
+    const adminEmails = [
+      "erica@escritoriomovel.com",
+      "elianefragasilva@gmail.com",
+      "glauber@brack.com.br",
+    ];
+
+    return adminEmails.includes(userEmail);
+  }, [userEmail]);
+
   // Check if user is within 30-day grace period
   const isWithinGracePeriod = React.useMemo(() => {
     if (!userCreatedAt) return false;
@@ -82,20 +99,13 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
 
   // Verificar se a assinatura está dentro do período válido
   const isSubscriptionValid = React.useMemo(() => {
-    console.log(
-      "SubscriptionGuard: Checking subscription validity",
-      subscription
-    );
-    console.log(
-      "SubscriptionGuard: Is within grace period:",
-      isWithinGracePeriod
-    );
+    // If user is an admin, allow access regardless of subscription
+    if (isAdminUser) {
+      return true;
+    }
 
     // If user is within 30-day grace period, allow access regardless of subscription
     if (isWithinGracePeriod) {
-      console.log(
-        "SubscriptionGuard: User is within grace period, allowing access"
-      );
       return true;
     }
 
@@ -105,18 +115,11 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
     }
 
     if (subscription.status !== "active") {
-      console.log(
-        "SubscriptionGuard: Subscription status is not active:",
-        subscription.status
-      );
       return false;
     }
 
     // Para assinaturas premium, permitir acesso total
     if (subscription.plan_type === "premium") {
-      console.log(
-        "SubscriptionGuard: Premium subscription detected, allowing access"
-      );
       return true;
     }
 
@@ -125,19 +128,14 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
       const currentDate = new Date();
       const periodEndDate = new Date(subscription.current_period_end);
 
-      console.log("SubscriptionGuard: Current date:", currentDate);
-      console.log("SubscriptionGuard: Period end date:", periodEndDate);
-
       // Se a data atual for maior que a data de fim do período, a assinatura expirou
       if (currentDate > periodEndDate) {
-        console.log("SubscriptionGuard: Subscription expired");
         return false;
       }
     }
 
-    console.log("SubscriptionGuard: Subscription is valid");
     return true;
-  }, [subscription, isWithinGracePeriod]);
+  }, [subscription, isWithinGracePeriod, isAdminUser]);
 
   if (isLoading || isCheckingUserDate) {
     return (
@@ -160,7 +158,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
           <CardContent className="space-y-4">
             <p className="text-muted-foreground">
               {!subscription || subscription.status !== "active"
-                ? `Para acessar ${feature}, você precisa de uma assinatura ativa do MoneyZap.`
+                ? `Para acessar ${feature}, você precisa de uma assinatura ativa do Meu Controle IA.`
                 : `Sua assinatura expirou. Para continuar acessando ${feature}, você precisa renovar sua assinatura.`}
             </p>
             {isWithinGracePeriod && (

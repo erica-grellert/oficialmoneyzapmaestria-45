@@ -170,7 +170,6 @@
 }
 
 @layer components {
-  /* MoneyZap Component Classes */
   .mz-hero-card {
     @apply bg-mz-gradient text-white rounded-mz-card p-8 shadow-mz-card relative overflow-hidden;
   }
