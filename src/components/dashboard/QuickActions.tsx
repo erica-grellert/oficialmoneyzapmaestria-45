@@ -21,7 +21,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
         className="h-12 bg-white border-slate-200 hover:bg-slate-50 text-slate-700 font-medium"
       >
         <ArrowDownLeft className="mr-2 h-5 w-5" />
-        Retirar
+        Despesa
       </Button>
       
       <Button 
@@ -30,7 +30,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
         className="h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
       >
         <ArrowUpRight className="mr-2 h-5 w-5" />
-        Depositar
+        Crédito
       </Button>
     </div>
   );
