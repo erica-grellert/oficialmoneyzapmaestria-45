@@ -22,8 +22,6 @@ const ResetPasswordPage = () => {
   // Verificar se o usuário tem um token válido de redefinição de senha
   useEffect(() => {
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-
       // Verificar se há parâmetros de recuperação na URL (query string ou hash)
       const urlParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -31,15 +29,32 @@ const ResetPasswordPage = () => {
         urlParams.get("type") === "recovery" ||
         hashParams.get("type") === "recovery";
 
-      // Se não houver sessão ou o usuário não estiver em modo de recuperação, redirecionar
-      if (!data.session || !hasRecoveryType) {
+      // Se não há parâmetros de recuperação, redirecionar
+      if (!hasRecoveryType) {
         toast({
           title: "Link inválido",
           description: "O link de redefinição de senha é inválido ou expirou.",
           variant: "destructive",
         });
         navigate("/forgot-password");
+        return;
       }
+
+      // Verificar se há um token na URL
+      const token = urlParams.get("token") || hashParams.get("token");
+      if (!token) {
+        toast({
+          title: "Link inválido",
+          description: "Token de redefinição não encontrado.",
+          variant: "destructive",
+        });
+        navigate("/forgot-password");
+        return;
+      }
+
+      // Para links de recuperação de senha do Supabase, não precisamos verificar sessão imediatamente
+      // O token será processado quando o usuário tentar atualizar a senha
+      console.log("Token de recuperação detectado:", token);
     };
 
     checkSession();
