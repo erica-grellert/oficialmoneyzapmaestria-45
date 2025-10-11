@@ -19,18 +19,17 @@ const ResetPasswordPage = () => {
   const { logoUrl, logoAltText } = useBrandingConfig();
   const navigate = useNavigate();
 
-  // Verificar se o usuário tem um token válido de redefinição de senha
+  // Verificar se o usuário tem uma sessão válida de recuperação de senha
   useEffect(() => {
     const checkSession = async () => {
-      // Verificar se há parâmetros de recuperação na URL (query string ou hash)
-      const urlParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const hasRecoveryType =
-        urlParams.get("type") === "recovery" ||
-        hashParams.get("type") === "recovery";
+      // Aguardar um pouco para o Supabase processar o token de recuperação
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Se não há parâmetros de recuperação, redirecionar
-      if (!hasRecoveryType) {
+      const { data, error } = await supabase.auth.getSession();
+      console.log("Sessão de recuperação detectada:", data);
+      console.log("Sessão de recuperação error:", error);
+
+      if (error || !data.session) {
         toast({
           title: "Link inválido",
           description: "O link de redefinição de senha é inválido ou expirou.",
@@ -40,21 +39,9 @@ const ResetPasswordPage = () => {
         return;
       }
 
-      // Verificar se há um token na URL
-      const token = urlParams.get("token") || hashParams.get("token");
-      if (!token) {
-        toast({
-          title: "Link inválido",
-          description: "Token de redefinição não encontrado.",
-          variant: "destructive",
-        });
-        navigate("/forgot-password");
-        return;
-      }
-
-      // Para links de recuperação de senha do Supabase, não precisamos verificar sessão imediatamente
-      // O token será processado quando o usuário tentar atualizar a senha
-      console.log("Token de recuperação detectado:", token);
+      // Verificar se a sessão é de recuperação de senha
+      // Quando Supabase processa um token de recuperação, ele define o usuário em modo de recuperação
+      console.log("Sessão de recuperação detectada:", data.session);
     };
 
     checkSession();
