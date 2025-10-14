@@ -24,19 +24,33 @@ serve(async (req) => {
       }
     );
 
-    const { email, password, full_name, phone, country_code } =
+    const { email, password, full_name, phone, country_code, referral_code } =
       await req.json();
 
     console.log(`[CREATE-USER-ACCOUNT] Creating user: ${email}`);
 
-    // Check if user already exists
-    const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
-    const userExists = existingUser?.users?.some(
+    // Check if user already exists in both auth and moneyzap_users tables
+    const { data: existingAuthUser } =
+      await supabaseAdmin.auth.admin.listUsers();
+    const authUserExists = existingAuthUser?.users?.some(
       (user) => user.email === email
     );
 
-    if (userExists) {
-      console.log(`[CREATE-USER-ACCOUNT] User ${email} already exists`);
+    const { data: existingProfileUser } = await supabaseAdmin
+      .from("moneyzap_users")
+      .select("id, email")
+      .eq("email", email)
+      .limit(1);
+
+    if (
+      authUserExists ||
+      (existingProfileUser && existingProfileUser.length > 0)
+    ) {
+      console.log(
+        `[CREATE-USER-ACCOUNT] User ${email} already exists in auth: ${authUserExists}, in profile: ${
+          existingProfileUser?.length > 0
+        }`
+      );
       return new Response(
         JSON.stringify({
           error: "User already exists",
@@ -76,11 +90,163 @@ serve(async (req) => {
     const userId = newUser.user.id;
     console.log(`[CREATE-USER-ACCOUNT] User created with ID: ${userId}`);
 
-    // Note: User profile will be automatically created by the database trigger
-    // when a user is inserted into auth.users table
+    // Handle referral code if provided
+    let referrerId = null;
+    if (referral_code) {
+      console.log(
+        `[CREATE-USER-ACCOUNT] Processing referral code: ${referral_code}`
+      );
+
+      // Get the referrer's ID
+      const { data: referrer, error: referrerError } = await supabaseAdmin
+        .from("moneyzap_users")
+        .select("id")
+        .eq("referral_code", referral_code.toUpperCase())
+        .single();
+
+      if (referrerError || !referrer) {
+        console.log(
+          `[CREATE-USER-ACCOUNT] Invalid referral code: ${referral_code}`
+        );
+      } else {
+        referrerId = referrer.id;
+        console.log(
+          `[CREATE-USER-ACCOUNT] Valid referral code, referrer ID: ${referrerId}`
+        );
+      }
+    }
+
+    // Create user profile with referral information
     console.log(
-      `[CREATE-USER-ACCOUNT] User profile will be created by database trigger`
+      `[CREATE-USER-ACCOUNT] Creating user profile with referral info`
     );
+    console.log(
+      `[CREATE-USER-ACCOUNT] Profile data - userId: ${userId}, referred_by: ${referrerId}, referral_code: ${referral_code}`
+    );
+    const { error: profileError } = await supabaseAdmin
+      .from("moneyzap_users")
+      .insert({
+        id: userId,
+        email,
+        name: full_name || email.split("@")[0],
+        phone,
+        referred_by: referrerId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+    if (profileError) {
+      console.error(
+        `[CREATE-USER-ACCOUNT] Error creating user profile:`,
+        profileError
+      );
+
+      // Handle duplicate key constraint specifically
+      if (
+        profileError.code === "23505" ||
+        profileError.message?.includes("duplicate key")
+      ) {
+        console.log(
+          `[CREATE-USER-ACCOUNT] User profile already exists, checking if user was created successfully`
+        );
+
+        // Check if the user profile actually exists (race condition - first request succeeded)
+        const { data: existingProfile, error: checkError } = await supabaseAdmin
+          .from("moneyzap_users")
+          .select("id, email, name")
+          .eq("id", userId)
+          .single();
+
+        if (existingProfile && !checkError) {
+          console.log(
+            `[CREATE-USER-ACCOUNT] User profile exists, processing referral bonus before returning success`
+          );
+
+          // Process referral bonus even in race condition case
+          if (referrerId) {
+            console.log(
+              `[CREATE-USER-ACCOUNT] Processing referral bonus for referrer: ${referrerId} (race condition case)`
+            );
+            console.log(
+              `[CREATE-USER-ACCOUNT] Race condition - referral_code: ${referral_code}, referrerId: ${referrerId}`
+            );
+            const { data: bonusResult, error: bonusError } =
+              await supabaseAdmin.rpc("process_referral_bonus", {
+                referrer_id: referrerId,
+                bonus_days: 30,
+              });
+
+            if (bonusError) {
+              console.error(
+                `[CREATE-USER-ACCOUNT] Error processing referral bonus (race condition):`,
+                bonusError
+              );
+              // Don't throw error here, just log it - user creation should still succeed
+            } else {
+              console.log(
+                `[CREATE-USER-ACCOUNT] Referral bonus processed successfully (race condition):`,
+                bonusResult
+              );
+            }
+          }
+
+          return new Response(
+            JSON.stringify({
+              message: "User created successfully (race condition resolved)",
+              user: newUser.user,
+              success: true,
+            }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 200,
+            }
+          );
+        } else {
+          console.log(
+            `[CREATE-USER-ACCOUNT] User profile doesn't exist, this is a real error`
+          );
+          return new Response(
+            JSON.stringify({
+              error: "User already exists",
+              message: "Este e-mail já está cadastrado. Faça login.",
+            }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+      }
+
+      throw profileError;
+    }
+
+    // Process referral bonus if valid referral code was used
+    if (referrerId) {
+      console.log(
+        `[CREATE-USER-ACCOUNT] Processing referral bonus for referrer: ${referrerId}`
+      );
+      const { data: bonusResult, error: bonusError } = await supabaseAdmin.rpc(
+        "process_referral_bonus",
+        {
+          referrer_id: referrerId,
+          bonus_days: 30,
+        }
+      );
+
+      if (bonusError) {
+        console.error(
+          `[CREATE-USER-ACCOUNT] Error processing referral bonus:`,
+          bonusError
+        );
+        // Don't throw error here, just log it - user creation should still succeed
+      } else {
+        console.log(
+          `[CREATE-USER-ACCOUNT] Referral bonus processed successfully:`,
+          bonusResult
+        );
+      }
+    }
 
     return new Response(
       JSON.stringify({

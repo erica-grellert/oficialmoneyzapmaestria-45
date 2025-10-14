@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Crown, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  hasActiveReferralBonus,
+  getReferralBonusExpiry,
+} from "@/services/referralService";
 
 interface SubscriptionGuardProps {
   children: React.ReactNode;
@@ -20,6 +24,10 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
   const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
   const [isCheckingUserDate, setIsCheckingUserDate] = useState(true);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [hasReferralBonus, setHasReferralBonus] = useState(false);
+  const [referralBonusExpiry, setReferralBonusExpiry] = useState<Date | null>(
+    null
+  );
 
   // Fetch user creation date
   useEffect(() => {
@@ -56,6 +64,15 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
         } else {
           setUserCreatedAt(userData.created_at);
         }
+
+        // Check for referral bonus
+        const hasBonus = await hasActiveReferralBonus();
+        setHasReferralBonus(hasBonus);
+
+        if (hasBonus) {
+          const bonusExpiry = await getReferralBonusExpiry();
+          setReferralBonusExpiry(bonusExpiry);
+        }
       } catch (error) {
         console.error("SubscriptionGuard: Error fetching user data:", error);
       } finally {
@@ -79,7 +96,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
     return adminEmails.includes(userEmail);
   }, [userEmail]);
 
-  // Check if user is within 30-day grace period
+  // Check if user is within grace period (30 days + referral bonus)
   const isWithinGracePeriod = React.useMemo(() => {
     if (!userCreatedAt) return false;
 
@@ -90,12 +107,29 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
         (1000 * 60 * 60 * 24)
     );
 
+    // Base grace period is 30 days
+    let gracePeriodDays = 30;
+
+    // Add referral bonus days if active
+    if (hasReferralBonus && referralBonusExpiry) {
+      const bonusDays = Math.floor(
+        (referralBonusExpiry.getTime() - userCreationDate.getTime()) /
+          (1000 * 60 * 60 * 24)
+      );
+      gracePeriodDays = Math.max(gracePeriodDays, bonusDays);
+    }
+
     console.log(
       "SubscriptionGuard: Days since user creation:",
-      daysSinceCreation
+      daysSinceCreation,
+      "Grace period days:",
+      gracePeriodDays,
+      "Has referral bonus:",
+      hasReferralBonus
     );
-    return daysSinceCreation <= 30;
-  }, [userCreatedAt]);
+
+    return daysSinceCreation <= gracePeriodDays;
+  }, [userCreatedAt, hasReferralBonus, referralBonusExpiry]);
 
   // Verificar se a assinatura está dentro do período válido
   const isSubscriptionValid = React.useMemo(() => {
@@ -162,10 +196,17 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
                 : `Sua assinatura expirou. Para continuar acessando ${feature}, você precisa renovar sua assinatura.`}
             </p>
             {isWithinGracePeriod && (
-              <p className="text-sm text-green-600 bg-green-50 p-3 rounded-lg">
-                Você ainda está no período de teste gratuito de 30 dias após o
-                cadastro.
-              </p>
+              <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg">
+                <p>
+                  Você ainda está no período de teste gratuito após o cadastro.
+                </p>
+                {hasReferralBonus && referralBonusExpiry && (
+                  <p className="mt-1 text-xs">
+                    🎉 Bônus de indicação ativo até{" "}
+                    {referralBonusExpiry.toLocaleDateString("pt-BR")}
+                  </p>
+                )}
+              </div>
             )}
             <div className="space-y-3">
               <Button

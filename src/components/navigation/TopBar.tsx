@@ -1,6 +1,6 @@
 import React from "react";
-import { NavLink, useLocation } from "react-router-dom";
-import { Bell } from "lucide-react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Bell, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +18,7 @@ const navigationItems = [
 
 const TopBar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, isLoading } = useAdaptiveContext();
   const { companyName, logoUrl } = useBrandingConfig();
 
@@ -60,9 +61,13 @@ const TopBar = () => {
 
       {/* Ações */}
       <div className="flex items-center gap-2 sm:gap-3">
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full text-xs"></span>
+        <Button
+          variant="ghost"
+          className="flex items-center text-sm text-primary-foreground rounded-md border-amber-300 border"
+          onClick={() => navigate("/referral")}
+        >
+          <Gift className="h-5 w-5" />
+          <span className="text-xs">Indicações</span>
         </Button>
 
         {/* Debug temporário - mostrar estado do usuário */}
