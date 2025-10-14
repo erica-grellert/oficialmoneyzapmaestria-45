@@ -282,17 +282,11 @@ const LoginPage = () => {
         // Update authData with the actual session
         authData.session = signInData.session;
 
-        // Account created successfully, show success message
-        toast({
-          title: "Conta criada com sucesso!",
-          description:
-            "Sua conta foi criada, confirmada e você foi logado automaticamente.",
+        // Account created successfully, redirect to dashboard and show welcome modal there
+        navigate("/dashboard", {
+          replace: true,
+          state: { justRegistered: true },
         });
-
-        // Since user is already logged in, redirect to dashboard
-        setTimeout(() => {
-          navigate("/dashboard", { replace: true });
-        }, 2000);
       } catch (error) {
         console.error("LoginPage: Registration error:", error);
         setIsLoading(false);
@@ -328,13 +322,15 @@ const LoginPage = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-md mx-auto">
           {/* Logo */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-16">
             <div className="relative h-24 w-auto mx-auto mb-4">
               {/* Actual logo */}
               <img
                 src={logoUrl}
                 className={`h-24 w-auto mx-auto transition-opacity duration-300`}
               />
+
+              <h1 className="text-xl font-bold mt-2">Meu Controle IA</h1>
             </div>
           </div>
 
