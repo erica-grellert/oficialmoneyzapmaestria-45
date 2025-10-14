@@ -1,18 +1,71 @@
--- Add referral system fields to moneyzap_users table
-ALTER TABLE public.moneyzap_users 
-ADD COLUMN referral_code TEXT UNIQUE,
-ADD COLUMN referred_by UUID,
-ADD COLUMN referral_bonus_days INTEGER DEFAULT 0,
-ADD COLUMN referral_bonus_expires_at TIMESTAMP WITH TIME ZONE;
+-- Add referral system fields to moneyzap_users table (only if they don't exist)
+DO $$
+BEGIN
+    -- Add referral_code column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_schema = 'public' 
+                   AND table_name = 'moneyzap_users' 
+                   AND column_name = 'referral_code') THEN
+        ALTER TABLE public.moneyzap_users ADD COLUMN referral_code TEXT UNIQUE;
+    END IF;
+    
+    -- Add referred_by column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_schema = 'public' 
+                   AND table_name = 'moneyzap_users' 
+                   AND column_name = 'referred_by') THEN
+        ALTER TABLE public.moneyzap_users ADD COLUMN referred_by UUID;
+    END IF;
+    
+    -- Add referral_bonus_days column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_schema = 'public' 
+                   AND table_name = 'moneyzap_users' 
+                   AND column_name = 'referral_bonus_days') THEN
+        ALTER TABLE public.moneyzap_users ADD COLUMN referral_bonus_days INTEGER DEFAULT 0;
+    END IF;
+    
+    -- Add referral_bonus_expires_at column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_schema = 'public' 
+                   AND table_name = 'moneyzap_users' 
+                   AND column_name = 'referral_bonus_expires_at') THEN
+        ALTER TABLE public.moneyzap_users ADD COLUMN referral_bonus_expires_at TIMESTAMP WITH TIME ZONE;
+    END IF;
+END $$;
 
--- Create index for faster referral code lookups
-CREATE INDEX idx_moneyzap_users_referral_code ON public.moneyzap_users(referral_code);
-CREATE INDEX idx_moneyzap_users_referred_by ON public.moneyzap_users(referred_by);
+-- Create index for faster referral code lookups (only if they don't exist)
+DO $$
+BEGIN
+    -- Create referral_code index if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes 
+                   WHERE schemaname = 'public' 
+                   AND tablename = 'moneyzap_users' 
+                   AND indexname = 'idx_moneyzap_users_referral_code') THEN
+        CREATE INDEX idx_moneyzap_users_referral_code ON public.moneyzap_users(referral_code);
+    END IF;
+    
+    -- Create referred_by index if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes 
+                   WHERE schemaname = 'public' 
+                   AND tablename = 'moneyzap_users' 
+                   AND indexname = 'idx_moneyzap_users_referred_by') THEN
+        CREATE INDEX idx_moneyzap_users_referred_by ON public.moneyzap_users(referred_by);
+    END IF;
+END $$;
 
--- Add foreign key constraint for referred_by
-ALTER TABLE public.moneyzap_users 
-ADD CONSTRAINT fk_moneyzap_users_referred_by 
-FOREIGN KEY (referred_by) REFERENCES public.moneyzap_users(id);
+-- Add foreign key constraint for referred_by (only if it doesn't exist)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints 
+                   WHERE constraint_schema = 'public' 
+                   AND table_name = 'moneyzap_users' 
+                   AND constraint_name = 'fk_moneyzap_users_referred_by') THEN
+        ALTER TABLE public.moneyzap_users 
+        ADD CONSTRAINT fk_moneyzap_users_referred_by 
+        FOREIGN KEY (referred_by) REFERENCES public.moneyzap_users(id);
+    END IF;
+END $$;
 
 -- Create a function to generate unique referral codes
 CREATE OR REPLACE FUNCTION generate_referral_code()
@@ -36,44 +89,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create a function to process referral bonuses
-CREATE OR REPLACE FUNCTION process_referral_bonus(referrer_id TEXT, bonus_days INTEGER DEFAULT 30)
-RETURNS BOOLEAN AS $$
-DECLARE
-    current_bonus_days INTEGER;
-    new_expiry_date TIMESTAMP WITH TIME ZONE;
-BEGIN
-    -- Get current bonus days and expiry
-    SELECT 
-        COALESCE(referral_bonus_days, 0),
-        COALESCE(referral_bonus_expires_at, NOW())
-    INTO current_bonus_days, new_expiry_date
-    FROM public.moneyzap_users 
-    WHERE id = referrer_id;
-    
-    -- If current bonus hasn't expired, extend it
-    IF new_expiry_date > NOW() THEN
-        new_expiry_date := new_expiry_date + (bonus_days || ' days')::INTERVAL;
-    ELSE
-        -- If expired or no bonus, start from now
-        new_expiry_date := NOW() + (bonus_days || ' days')::INTERVAL;
-    END IF;
-    
-    -- Update the referrer's bonus
-    UPDATE public.moneyzap_users 
-    SET 
-        referral_bonus_days = current_bonus_days + bonus_days,
-        referral_bonus_expires_at = new_expiry_date,
-        updated_at = NOW()
-    WHERE id = referrer_id;
-    
-    RETURN TRUE;
-EXCEPTION
-    WHEN OTHERS THEN
-        RETURN FALSE;
-END;
-$$ LANGUAGE plpgsql;
-
 -- Create a trigger to automatically generate referral codes for new users
 CREATE OR REPLACE FUNCTION set_referral_code()
 RETURNS TRIGGER AS $$
@@ -87,10 +102,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trigger_set_referral_code
-    BEFORE INSERT ON public.moneyzap_users
-    FOR EACH ROW
-    EXECUTE FUNCTION set_referral_code();
+-- Create trigger to automatically generate referral codes for new users (only if it doesn't exist)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.triggers 
+                   WHERE trigger_schema = 'public' 
+                   AND event_object_table = 'moneyzap_users' 
+                   AND trigger_name = 'trigger_set_referral_code') THEN
+        CREATE TRIGGER trigger_set_referral_code
+            BEFORE INSERT ON public.moneyzap_users
+            FOR EACH ROW
+            EXECUTE FUNCTION set_referral_code();
+    END IF;
+END $$;
 
 -- Create a view to track referral statistics
 CREATE OR REPLACE VIEW public.referral_stats AS
@@ -110,4 +134,3 @@ GROUP BY u.id, u.email, u.name, u.referral_code, u.referral_bonus_days, u.referr
 -- Grant necessary permissions
 GRANT SELECT ON public.referral_stats TO authenticated;
 GRANT EXECUTE ON FUNCTION generate_referral_code() TO authenticated;
-GRANT EXECUTE ON FUNCTION process_referral_bonus(TEXT, INTEGER) TO authenticated;
