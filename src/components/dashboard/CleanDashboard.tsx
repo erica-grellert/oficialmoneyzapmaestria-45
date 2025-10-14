@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import SubscriptionGuard from "@/components/subscription/SubscriptionGuard";
 import TopBar from "@/components/navigation/TopBar";
 import DashboardHeader from "./DashboardHeader";
 import QuickActions from "./QuickActions";
 import KPICards from "./KPICards";
-import AlertsSection from "./AlertsSection";
+
 import FinancialSummaryChart from "./FinancialSummaryChart";
 import LatestTransactions from "./LatestTransactions";
 import GoalsSummary from "./GoalsSummary";
@@ -14,13 +14,24 @@ import FloatingActionButton from "@/components/navigation/FloatingActionButton";
 import { TransactionFormV2 } from "@/components/common/TransactionFormV2";
 import { useAdaptiveContext } from "@/hooks/useAdaptiveContext";
 import { calculateMonthlyFinancialData } from "@/utils/transactionUtils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { WHATSAPP_NUMBER } from "@/constants/app.constants";
 
 const CleanDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation() as { state?: { justRegistered?: boolean } };
   const { transactions, goals } = useAdaptiveContext();
   const [selectedPeriod, setSelectedPeriod] = useState("current-month");
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>();
   const [isLoading, setIsLoading] = useState(true);
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
 
   // Estado para controlar o TransactionForm
   const [transactionFormOpen, setTransactionFormOpen] = useState(false);
@@ -36,6 +47,15 @@ const CleanDashboard = () => {
     const timer = setTimeout(() => setIsLoading(false), 1000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Open welcome modal when redirected after registration
+  useEffect(() => {
+    if (location.state?.justRegistered) {
+      setWelcomeOpen(true);
+      // Clear state so the modal does not reopen on refresh/back
+      navigate(".", { replace: true, state: {} });
+    }
+  }, [location.state, navigate]);
 
   // Load saved period preference
   useEffect(() => {
@@ -92,10 +112,6 @@ const CleanDashboard = () => {
     setTransactionDefaultType("income");
   };
 
-  const handleAlertClick = (alert) => {
-    alert.action();
-  };
-
   const handleEditTransaction = (transaction) => {
     console.log("Editar transação:", transaction);
   };
@@ -129,6 +145,13 @@ const CleanDashboard = () => {
     navigate("/goals?create=true");
   };
 
+  const handleMessageAssistant = () => {
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}`, "_blank");
+    setWelcomeOpen(false);
+  };
+
+  const handleCloseWelcome = () => setWelcomeOpen(false);
+
   const container = {
     hidden: { opacity: 0 },
     visible: {
@@ -155,6 +178,37 @@ const CleanDashboard = () => {
 
       <SubscriptionGuard>
         <div className="min-h-screen bg-slate-50/50">
+          <Dialog open={welcomeOpen} onOpenChange={setWelcomeOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Boas vindas ao Meu Controle IA!</DialogTitle>
+                <DialogDescription>
+                  <div className="space-y-3 text-foreground">
+                    <p>
+                      Todos os seus lançamentos poderão ser feitos por aqui no
+                      seu Dashboard e por mensagens diretamente no WhatsApp.
+                    </p>
+                    <p>
+                      Para sua maior comodidade, prefira usar MeuControle-IA
+                      através do seu WhatsApp, enviando áudio ou mensagem de
+                      texto para realizar seus lançamentos financeiros. 💰
+                    </p>
+                    <p>
+                      Salve o numero do MeuControle-IA em seus Contatos e deixe
+                      ele como Favorito para facilitar a sua localização e
+                      sempre ter ele a sua disposição.
+                    </p>
+                  </div>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={handleCloseWelcome}>
+                  Fechar
+                </Button>
+                <Button onClick={handleMessageAssistant}>Começar agora</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
           <motion.div
             variants={container}
             initial="hidden"
