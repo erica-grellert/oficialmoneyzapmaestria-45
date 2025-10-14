@@ -153,39 +153,109 @@ serve(async (req) => {
         // Check if the user profile actually exists (race condition - first request succeeded)
         const { data: existingProfile, error: checkError } = await supabaseAdmin
           .from("moneyzap_users")
-          .select("id, email, name")
+          .select("id, email, name, referred_by")
           .eq("id", userId)
           .single();
 
         if (existingProfile && !checkError) {
           console.log(
-            `[CREATE-USER-ACCOUNT] User profile exists, processing referral bonus before returning success`
+            `[CREATE-USER-ACCOUNT] User profile exists, updating referred_by field and processing bonus`
+          );
+          console.log(
+            `[CREATE-USER-ACCOUNT] Existing profile - referred_by: ${existingProfile.referred_by}, expected: ${referrerId}`
           );
 
-          // Process referral bonus even in race condition case
+          // Update the existing user with referred_by field if it's not set
+          if (referrerId && !existingProfile.referred_by) {
+            console.log(
+              `[CREATE-USER-ACCOUNT] Updating existing user with referred_by: ${referrerId}`
+            );
+            const { error: updateError } = await supabaseAdmin
+              .from("moneyzap_users")
+              .update({
+                referred_by: referrerId,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", userId);
+
+            if (updateError) {
+              console.error(
+                `[CREATE-USER-ACCOUNT] Error updating referred_by field:`,
+                updateError
+              );
+            } else {
+              console.log(
+                `[CREATE-USER-ACCOUNT] Successfully updated referred_by field`
+              );
+            }
+          }
+
+          // Process referral bonus for the referrer
           if (referrerId) {
             console.log(
               `[CREATE-USER-ACCOUNT] Processing referral bonus for referrer: ${referrerId} (race condition case)`
             );
-            console.log(
-              `[CREATE-USER-ACCOUNT] Race condition - referral_code: ${referral_code}, referrerId: ${referrerId}`
-            );
-            const { data: bonusResult, error: bonusError } =
-              await supabaseAdmin.rpc("process_referral_bonus", {
-                referrer_id: referrerId,
-                bonus_days: 30,
-              });
 
-            if (bonusError) {
+            try {
+              // Get current referral bonus data
+              const { data: referrerData, error: fetchError } =
+                await supabaseAdmin
+                  .from("moneyzap_users")
+                  .select("referral_bonus_days, referral_bonus_expires_at")
+                  .eq("id", referrerId)
+                  .single();
+
+              if (fetchError) {
+                console.error(
+                  `[CREATE-USER-ACCOUNT] Error fetching referrer data (race condition):`,
+                  fetchError
+                );
+              } else {
+                const currentBonusDays = referrerData?.referral_bonus_days || 0;
+                const currentExpiryDate =
+                  referrerData?.referral_bonus_expires_at;
+                const now = new Date();
+
+                let newExpiryDate: Date;
+
+                // Check if referral_bonus_expires_at is in the future
+                if (currentExpiryDate && new Date(currentExpiryDate) > now) {
+                  // If it is, add 30 days to it
+                  newExpiryDate = new Date(currentExpiryDate);
+                  newExpiryDate.setDate(newExpiryDate.getDate() + 30);
+                } else {
+                  // If it is not, set it to the current date + 30 days
+                  newExpiryDate = new Date(now);
+                  newExpiryDate.setDate(newExpiryDate.getDate() + 30);
+                }
+
+                // Update the referral_bonus_days and referral_bonus_expires_at
+                const { error: updateError } = await supabaseAdmin
+                  .from("moneyzap_users")
+                  .update({
+                    referral_bonus_days: currentBonusDays + 30,
+                    referral_bonus_expires_at: newExpiryDate.toISOString(),
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("id", referrerId);
+
+                if (updateError) {
+                  console.error(
+                    `[CREATE-USER-ACCOUNT] Error updating referral bonus (race condition):`,
+                    updateError
+                  );
+                } else {
+                  console.log(
+                    `[CREATE-USER-ACCOUNT] Successfully updated referral bonus for referrer: ${referrerId} (race condition). New bonus days: ${
+                      currentBonusDays + 30
+                    }, expires at: ${newExpiryDate.toISOString()}`
+                  );
+                }
+              }
+            } catch (error) {
               console.error(
-                `[CREATE-USER-ACCOUNT] Error processing referral bonus (race condition):`,
-                bonusError
-              );
-              // Don't throw error here, just log it - user creation should still succeed
-            } else {
-              console.log(
-                `[CREATE-USER-ACCOUNT] Referral bonus processed successfully (race condition):`,
-                bonusResult
+                `[CREATE-USER-ACCOUNT] Exception processing referral bonus (race condition):`,
+                error
               );
             }
           }
@@ -226,24 +296,65 @@ serve(async (req) => {
       console.log(
         `[CREATE-USER-ACCOUNT] Processing referral bonus for referrer: ${referrerId}`
       );
-      const { data: bonusResult, error: bonusError } = await supabaseAdmin.rpc(
-        "process_referral_bonus",
-        {
-          referrer_id: referrerId,
-          bonus_days: 30,
-        }
-      );
 
-      if (bonusError) {
+      try {
+        // Get current referral bonus data
+        const { data: referrerData, error: fetchError } = await supabaseAdmin
+          .from("moneyzap_users")
+          .select("referral_bonus_days, referral_bonus_expires_at")
+          .eq("id", referrerId)
+          .single();
+
+        if (fetchError) {
+          console.error(
+            `[CREATE-USER-ACCOUNT] Error fetching referrer data:`,
+            fetchError
+          );
+        } else {
+          const currentBonusDays = referrerData?.referral_bonus_days || 0;
+          const currentExpiryDate = referrerData?.referral_bonus_expires_at;
+          const now = new Date();
+
+          let newExpiryDate: Date;
+
+          // Check if referral_bonus_expires_at is in the future
+          if (currentExpiryDate && new Date(currentExpiryDate) > now) {
+            // If it is, add 30 days to it
+            newExpiryDate = new Date(currentExpiryDate);
+            newExpiryDate.setDate(newExpiryDate.getDate() + 30);
+          } else {
+            // If it is not, set it to the current date + 30 days
+            newExpiryDate = new Date(now);
+            newExpiryDate.setDate(newExpiryDate.getDate() + 30);
+          }
+
+          // Update the referral_bonus_days and referral_bonus_expires_at
+          const { error: updateError } = await supabaseAdmin
+            .from("moneyzap_users")
+            .update({
+              referral_bonus_days: currentBonusDays + 30,
+              referral_bonus_expires_at: newExpiryDate.toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", referrerId);
+
+          if (updateError) {
+            console.error(
+              `[CREATE-USER-ACCOUNT] Error updating referral bonus:`,
+              updateError
+            );
+          } else {
+            console.log(
+              `[CREATE-USER-ACCOUNT] Successfully updated referral bonus for referrer: ${referrerId}. New bonus days: ${
+                currentBonusDays + 30
+              }, expires at: ${newExpiryDate.toISOString()}`
+            );
+          }
+        }
+      } catch (error) {
         console.error(
-          `[CREATE-USER-ACCOUNT] Error processing referral bonus:`,
-          bonusError
-        );
-        // Don't throw error here, just log it - user creation should still succeed
-      } else {
-        console.log(
-          `[CREATE-USER-ACCOUNT] Referral bonus processed successfully:`,
-          bonusResult
+          `[CREATE-USER-ACCOUNT] Exception processing referral bonus:`,
+          error
         );
       }
     }

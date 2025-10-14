@@ -74,10 +74,8 @@ const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ className }) => {
   const handleCopyReferralLink = async () => {
     if (!referralInfo?.referral_code) return;
 
-    const referralLink = generateReferralLink(referralInfo.referral_code);
-
     try {
-      await navigator.clipboard.writeText(referralLink);
+      await navigator.clipboard.writeText(referralInfo.referral_code);
       setCopied(true);
       toast({
         title: "Link copiado!",
@@ -204,14 +202,6 @@ const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ className }) => {
                 <Share2 className="h-4 w-4" />
                 Compartilhar
               </Button>
-              <Button
-                onClick={handleDebugDatabase}
-                size="sm"
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                🔍 Debug DB
-              </Button>
             </div>
           </div>
 
@@ -226,7 +216,7 @@ const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ className }) => {
       </Card>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -253,13 +243,15 @@ const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ className }) => {
                 <p className="text-2xl font-bold text-gray-900">
                   {referralInfo.recent_referrals}
                 </p>
-                <p className="text-sm text-gray-600">Últimos 30 dias</p>
+                <p className="text-sm text-gray-600">
+                  Indicações nos Últimos 30 Dias
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-100 rounded-lg">
@@ -273,7 +265,7 @@ const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ className }) => {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       {/* Active Bonus Status */}
