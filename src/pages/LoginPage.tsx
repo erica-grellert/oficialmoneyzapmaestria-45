@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +14,11 @@ import CountrySelector from "@/components/common/CountrySelector";
 import { countries, Country, formatPhoneNumber } from "@/utils/countryUtils";
 import { applyPhoneMask, getPlaceholderText } from "@/utils/phoneUtils";
 import { useBrandingConfig } from "@/hooks/useBrandingConfig";
+import {
+  getReferralCodeFromUrl,
+  validateReferralCode,
+  getReferralCodeOwner,
+} from "@/services/referralService";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -31,8 +36,72 @@ const LoginPage = () => {
   const [selectedCountry, setSelectedCountry] = useState<Country>(countries[0]); // Default to Brazil
   const [showPassword, setShowPassword] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(true);
-  const [isLogoLoading, setIsLogoLoading] = useState(true);
   const [isPageLoading, setIsPageLoading] = useState(true);
+  const [referralCode, setReferralCode] = useState("");
+  const [referralCodeOwner, setReferralCodeOwner] = useState<{
+    name: string;
+    email: string;
+  } | null>(null);
+  const [isValidatingReferral, setIsValidatingReferral] = useState(false);
+  const isSubmittingRef = useRef(false);
+  const lastSubmissionRef = useRef<number>(0);
+  const currentRequestRef = useRef<AbortController | null>(null);
+
+  // Check for referral code in URL on component mount
+  useEffect(() => {
+    const urlReferralCode = getReferralCodeFromUrl();
+    if (urlReferralCode) {
+      setReferralCode(urlReferralCode);
+      validateReferralCodeFromUrl(urlReferralCode);
+    }
+  }, []);
+
+  const validateReferralCodeFromUrl = async (code: string) => {
+    setIsValidatingReferral(true);
+    try {
+      const isValid = await validateReferralCode(code);
+      console.log("isValid", isValid);
+      if (isValid) {
+        const owner = await getReferralCodeOwner(code);
+        setReferralCodeOwner(owner);
+      } else {
+        setReferralCodeOwner(null);
+      }
+    } catch (error) {
+      console.error("Error validating referral code:", error);
+      setReferralCodeOwner(null);
+    } finally {
+      setIsValidatingReferral(false);
+    }
+  };
+
+  // Debounced validation for manual referral code input
+  useEffect(() => {
+    if (!referralCode || referralCode.length < 6) {
+      setReferralCodeOwner(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setIsValidatingReferral(true);
+      try {
+        const isValid = await validateReferralCode(referralCode);
+        if (isValid) {
+          const owner = await getReferralCodeOwner(referralCode);
+          setReferralCodeOwner(owner);
+        } else {
+          setReferralCodeOwner(null);
+        }
+      } catch (error) {
+        console.error("Error validating referral code:", error);
+        setReferralCodeOwner(null);
+      } finally {
+        setIsValidatingReferral(false);
+      }
+    }, 1000); // 1 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [referralCode]);
 
   const checkUserRoleAndRedirect = useCallback(async () => {
     try {
@@ -176,9 +245,40 @@ const LoginPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Prevent double submission using ref for immediate check
+    if (isSubmittingRef.current || isLoading) {
+      console.log(
+        "Form submission already in progress, ignoring duplicate submission"
+      );
+      return;
+    }
+
+    // Add debounce protection - prevent submissions within 2 seconds
+    const now = Date.now();
+    if (now - lastSubmissionRef.current < 2000) {
+      console.log("Form submission too soon after last submission, ignoring");
+      return;
+    }
+
+    // Cancel any existing request
+    if (currentRequestRef.current) {
+      console.log("Cancelling previous request");
+      currentRequestRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    const abortController = new AbortController();
+    currentRequestRef.current = abortController;
+
+    // Set submitting flag immediately
+    isSubmittingRef.current = true;
+    lastSubmissionRef.current = now;
+
     if (isLoginMode) {
       // Handle login
       if (!email || !password) {
+        isSubmittingRef.current = false;
+        currentRequestRef.current = null;
         toast({
           title: t("common.error"),
           description: t("errors.fillAllFields"),
@@ -198,6 +298,8 @@ const LoginPage = () => {
       } catch (error) {
         console.error("LoginPage: Login error:", error);
         setIsLoading(false);
+        isSubmittingRef.current = false;
+        currentRequestRef.current = null;
         let errorMessage = error.message || t("auth.loginError");
         if (error.message?.includes("Invalid login credentials")) {
           errorMessage = t("errors.emailIncorrect");
@@ -213,6 +315,8 @@ const LoginPage = () => {
     } else {
       // Handle registration
       if (!email || !password || !fullName || !whatsapp) {
+        isSubmittingRef.current = false;
+        currentRequestRef.current = null;
         toast({
           title: t("common.error"),
           description: t("errors.fillAllFields"),
@@ -234,7 +338,9 @@ const LoginPage = () => {
               full_name: fullName,
               phone: formatPhoneNumber(selectedCountry, whatsapp), // Use utility function to format phone with country code
               country_code: selectedCountry.code,
+              referral_code: referralCode || null, // Include referral code if provided
             },
+            signal: abortController.signal,
           });
 
         if (signUpError) {
@@ -283,13 +389,23 @@ const LoginPage = () => {
         authData.session = signInData.session;
 
         // Account created successfully, redirect to dashboard and show welcome modal there
+        isSubmittingRef.current = false;
+        currentRequestRef.current = null;
         navigate("/dashboard", {
           replace: true,
           state: { justRegistered: true },
         });
       } catch (error) {
+        // Don't show error for aborted requests
+        if (error.name === "AbortError") {
+          console.log("Request was aborted");
+          return;
+        }
+
         console.error("LoginPage: Registration error:", error);
         setIsLoading(false);
+        isSubmittingRef.current = false;
+        currentRequestRef.current = null;
         setError(error.message || "Erro ao criar conta. Tente novamente.");
 
         // Remove loading class on error
@@ -488,10 +604,55 @@ const LoginPage = () => {
                   </div>
                 </div>
 
+                {/* Referral Code - Only show in registration mode */}
+                {!isLoginMode && (
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="referralCode"
+                      className="text-sm font-medium text-slate-700"
+                    >
+                      Código de Indicação (Opcional)
+                    </Label>
+                    <Input
+                      id="referralCode"
+                      name="referralCode"
+                      type="text"
+                      placeholder="Digite o código de indicação"
+                      value={referralCode}
+                      onChange={(e) =>
+                        setReferralCode(e.target.value.toUpperCase())
+                      }
+                      className="h-12 border-slate-200 focus:border-primary focus:ring-primary/20"
+                    />
+                    {isValidatingReferral && (
+                      <p className="text-sm text-blue-600">
+                        Validando código...
+                      </p>
+                    )}
+                    {referralCodeOwner && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm text-green-800">
+                          Você receberá 30 dias grátis ao se cadastrar.
+                        </p>
+                        <p className="text-xs text-green-600 mt-1">
+                          Indicação: {referralCodeOwner.name}
+                        </p>
+                      </div>
+                    )}
+                    {referralCode &&
+                      !referralCodeOwner &&
+                      !isValidatingReferral && (
+                        <p className="text-sm text-red-600">
+                          Código de indicação inválido
+                        </p>
+                      )}
+                  </div>
+                )}
+
                 <Button
                   type="submit"
                   className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                  disabled={isLoading}
+                  disabled={isLoading || isSubmittingRef.current}
                 >
                   {isLoading
                     ? "Carregando..."

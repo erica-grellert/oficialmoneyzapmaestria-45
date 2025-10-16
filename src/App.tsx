@@ -24,6 +24,7 @@ import CategoriesPage from "./pages/CategoriesPage";
 import PlansPage from "./pages/PlansPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import PaymentSuccessPage from "./pages/PaymentSuccessPage";
+import ReferralPage from "./pages/ReferralPage";
 
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
@@ -113,6 +114,14 @@ function App() {
                       element={
                         <PrivateRoute>
                           <CategoriesPage />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/referral"
+                      element={
+                        <PrivateRoute>
+                          <ReferralPage />
                         </PrivateRoute>
                       }
                     />

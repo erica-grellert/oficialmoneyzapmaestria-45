@@ -19,6 +19,7 @@ import {
   Crown,
   LogOut,
   Shield,
+  Gift,
 } from "lucide-react";
 interface SidebarProps {
   onProfileClick?: () => void;
@@ -145,10 +146,15 @@ const Sidebar: React.FC<SidebarProps> = ({ onProfileClick, onConfigClick }) => {
       label: t("nav.plans"),
       href: "/plans",
     },
+    {
+      icon: Gift,
+      label: "Indicações",
+      href: "/referral",
+    },
   ];
 
   // Adicionar item admin apenas se o usuário for admin e não estiver na página admin
-  let menuItems = [...defaultMenuItems];
+  const menuItems = [...defaultMenuItems];
   if (isAdmin && !isAdminPage) {
     const adminMenuItem = {
       icon: Shield,
@@ -183,7 +189,9 @@ const Sidebar: React.FC<SidebarProps> = ({ onProfileClick, onConfigClick }) => {
               </span>
             </div>
           )}
-          <h1 className="text-lg lg:text-xl xl:text-2xl font-bold text-primary truncate min-w-0">{companyName}</h1>
+          <h1 className="text-lg lg:text-xl xl:text-2xl font-bold text-primary truncate min-w-0">
+            {companyName}
+          </h1>
         </div>
       </div>
 
@@ -238,7 +246,9 @@ const Sidebar: React.FC<SidebarProps> = ({ onProfileClick, onConfigClick }) => {
             onClick={handleLogout}
           >
             <LogOut className="h-5 w-5 lg:h-6 lg:w-6 flex-shrink-0" />
-            <span className="truncate min-w-0 font-medium">{t("settings.logout")}</span>
+            <span className="truncate min-w-0 font-medium">
+              {t("settings.logout")}
+            </span>
           </Button>
         </div>
       </div>

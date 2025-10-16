@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { WHATSAPP_NUMBER } from "@/constants/app.constants";
+import ReferralStatusCard from "@/components/referral/ReferralStatusCard";
 
 const CleanDashboard = () => {
   const navigate = useNavigate();
@@ -237,6 +238,12 @@ const CleanDashboard = () => {
             <motion.div variants={item}>
               <KPICards data={kpiData} isLoading={isLoading} />
             </motion.div>
+
+            {/* <motion.div variants={item}>
+              <div className="mb-4 xs:mb-6 sm:mb-8">
+                <ReferralStatusCard showFullStats={false} />
+              </div>
+            </motion.div> */}
 
             {/* Financial Summary + Latest Transactions */}
             <motion.div variants={item}>

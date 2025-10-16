@@ -1,16 +1,24 @@
 import React from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Palette, CreditCard, DollarSign, Phone, Settings } from "lucide-react";
+import {
+  Palette,
+  CreditCard,
+  DollarSign,
+  Phone,
+  Settings,
+  Gift,
+} from "lucide-react";
 import BrandingConfigManager from "./BrandingConfigManager";
 import StripeConfigManager from "./StripeConfigManager";
 import PlanPricingManager from "./PlanPricingManager";
 import ContactConfigManager from "./ContactConfigManager";
+import ReferralAnalytics from "./ReferralAnalytics";
 
 const AdminSectionTabs: React.FC = () => {
   return (
     <Tabs defaultValue="branding" className="w-full">
       {/* Enhanced Tab Navigation */}
-      <TabsList className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 p-2 bg-gradient-to-r from-slate-50 to-blue-50/30 rounded-2xl h-auto border border-slate-200/50 shadow-sm">
+      <TabsList className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 p-2 bg-gradient-to-r from-slate-50 to-blue-50/30 rounded-2xl h-auto border border-slate-200/50 shadow-sm">
         <TabsTrigger
           value="branding"
           className="group flex items-center gap-3 px-6 py-4 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:text-slate-900 data-[state=active]:border-slate-200 rounded-xl transition-all duration-300 hover:bg-white/80 hover:shadow-md border border-transparent data-[state=active]:border-purple-200"
@@ -67,6 +75,21 @@ const AdminSectionTabs: React.FC = () => {
             <span className="font-semibold text-sm">Contato</span>
             <p className="text-xs text-slate-500 group-data-[state=active]:text-slate-700">
               Suporte
+            </p>
+          </div>
+        </TabsTrigger>
+
+        <TabsTrigger
+          value="referrals"
+          className="group flex items-center gap-3 px-6 py-4 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:text-slate-900 data-[state=active]:border-slate-200 rounded-xl transition-all duration-300 hover:bg-white/80 hover:shadow-md border border-transparent data-[state=active]:border-pink-200"
+        >
+          <div className="p-2.5 bg-gradient-to-br from-pink-100 to-pink-200 rounded-xl group-data-[state=active]:from-pink-500 group-data-[state=active]:to-pink-600 group-data-[state=active]:text-white transition-all duration-300 shadow-sm">
+            <Gift className="h-5 w-5" />
+          </div>
+          <div className="text-left">
+            <span className="font-semibold text-sm">Indicações</span>
+            <p className="text-xs text-slate-500 group-data-[state=active]:text-slate-700">
+              Analytics
             </p>
           </div>
         </TabsTrigger>
@@ -153,6 +176,28 @@ const AdminSectionTabs: React.FC = () => {
           </div>
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
             <ContactConfigManager />
+          </div>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="referrals" className="mt-8">
+        <div className="space-y-6">
+          <div className="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-pink-50 to-pink-100/50 rounded-2xl border border-pink-200/50">
+            <div className="p-4 bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl shadow-lg">
+              <Gift className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h3 className="text-3xl font-bold bg-gradient-to-r from-pink-700 to-pink-900 bg-clip-text text-transparent">
+                Analytics de Indicações
+              </h3>
+              <p className="text-pink-600 text-lg mt-1">
+                Acompanhe o desempenho do programa de indicações e métricas de
+                crescimento
+              </p>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            <ReferralAnalytics />
           </div>
         </div>
       </TabsContent>
