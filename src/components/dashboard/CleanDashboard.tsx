@@ -239,12 +239,11 @@ const CleanDashboard = () => {
               <KPICards data={kpiData} isLoading={isLoading} />
             </motion.div>
 
-            {/* Referral Status Card */}
-            <motion.div variants={item}>
+            {/* <motion.div variants={item}>
               <div className="mb-4 xs:mb-6 sm:mb-8">
                 <ReferralStatusCard showFullStats={false} />
               </div>
-            </motion.div>
+            </motion.div> */}
 
             {/* Financial Summary + Latest Transactions */}
             <motion.div variants={item}>

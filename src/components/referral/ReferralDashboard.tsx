@@ -117,15 +117,6 @@ const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ className }) => {
     }
   };
 
-  const handleDebugDatabase = async () => {
-    console.log("🔍 Running database debug...");
-    await debugReferralDatabase();
-    toast({
-      title: "Debug executado",
-      description: "Verifique o console do navegador para os resultados",
-    });
-  };
-
   if (isLoading) {
     return (
       <div className={`space-y-6 ${className}`}>

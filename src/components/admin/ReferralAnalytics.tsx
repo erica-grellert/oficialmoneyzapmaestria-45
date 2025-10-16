@@ -10,7 +10,6 @@ import {
   TrendingUp,
   Calendar,
   Search,
-  Download,
   RefreshCw,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -106,7 +105,7 @@ const ReferralAnalytics: React.FC = () => {
           email,
           referred_by,
           created_at,
-          referrer:moneyzap_users!referred_by(name, email)
+          referrer:referred_by(name, email)
         `
         )
         .not("referred_by", "is", null)
@@ -148,44 +147,6 @@ const ReferralAnalytics: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const exportData = () => {
-    if (!stats) return;
-
-    const csvContent = [
-      ["Métrica", "Valor"],
-      ["Total de Usuários", stats.total_users],
-      ["Total de Indicações", stats.total_referrals],
-      ["Indicadores Ativos", stats.active_referrers],
-      ["Total de Dias de Bônus", stats.total_bonus_days_given],
-      ["Taxa de Conversão (%)", stats.conversion_rate.toFixed(2)],
-      ["", ""],
-      ["Top Indicadores", ""],
-      ["Nome", "Email", "Código", "Indicações", "Dias Bônus"],
-      ...stats.top_referrers.map((ref) => [
-        ref.name,
-        ref.email,
-        ref.referral_code,
-        ref.total_referrals,
-        ref.bonus_days,
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `referral-analytics-${new Date().toISOString().split("T")[0]}.csv`
-    );
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const filteredRecentReferrals =
@@ -245,15 +206,6 @@ const ReferralAnalytics: React.FC = () => {
             <RefreshCw className="h-4 w-4" />
             Atualizar
           </Button>
-          <Button
-            onClick={exportData}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Exportar
-          </Button>
         </div>
       </div>
 
@@ -278,7 +230,7 @@ const ReferralAnalytics: React.FC = () => {
       </Card>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -310,53 +262,7 @@ const ReferralAnalytics: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.active_referrers}
-                </p>
-                <p className="text-sm text-gray-600">Indicadores Ativos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Calendar className="h-5 w-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.total_bonus_days_given}
-                </p>
-                <p className="text-sm text-gray-600">Dias de Bônus</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
-
-      {/* Conversion Rate */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="text-center">
-            <p className="text-3xl font-bold text-gray-900">
-              {stats.conversion_rate.toFixed(2)}%
-            </p>
-            <p className="text-sm text-gray-600">
-              Taxa de Conversão de Indicações
-            </p>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Top Referrers */}
       <Card>
@@ -385,12 +291,9 @@ const ReferralAnalytics: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="flex items-center gap-2">
+                  <div className="flex justify-end items-end">
                     <Badge variant="secondary">
                       {referrer.total_referrals} indicações
-                    </Badge>
-                    <Badge variant="outline">
-                      {referrer.bonus_days} dias bônus
                     </Badge>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
@@ -412,19 +315,6 @@ const ReferralAnalytics: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Search */}
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Buscar por nome, email ou indicador..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
           <div className="space-y-3">
             {filteredRecentReferrals.map((referral) => (
               <div
@@ -463,4 +353,3 @@ const ReferralAnalytics: React.FC = () => {
 };
 
 export default ReferralAnalytics;
-

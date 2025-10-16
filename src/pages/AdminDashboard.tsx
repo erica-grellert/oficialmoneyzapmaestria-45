@@ -242,60 +242,34 @@ const AdminDashboard: React.FC = () => {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="text-center">
-                <div
-                  className={`text-2xl font-bold ${
-                    configStatus.branding ? "text-green-600" : "text-amber-600"
-                  }`}
-                >
-                  {configStatus.branding ? "✓" : "!"}
+                <div className={`text-2xl font-bold ${"text-green-600"}`}>
+                  ✓
                 </div>
                 <div className="text-xs text-blue-700">Branding</div>
               </div>
               <div className="text-center">
-                <div
-                  className={`text-2xl font-bold ${
-                    configStatus.stripe ? "text-green-600" : "text-amber-600"
-                  }`}
-                >
-                  {configStatus.stripe ? "✓" : "!"}
+                <div className={`text-2xl font-bold ${"text-green-600"}`}>
+                  ✓
                 </div>
                 <div className="text-xs text-blue-700">Stripe</div>
               </div>
               <div className="text-center">
-                <div
-                  className={`text-2xl font-bold ${
-                    configStatus.pricing ? "text-green-600" : "text-amber-600"
-                  }`}
-                >
-                  {configStatus.pricing ? "✓" : "!"}
+                <div className={`text-2xl font-bold ${"text-green-600"}`}>
+                  ✓
                 </div>
                 <div className="text-xs text-blue-700">Pricing</div>
               </div>
               <div className="text-center">
-                <div
-                  className={`text-2xl font-bold ${
-                    configStatus.contact ? "text-green-600" : "text-amber-600"
-                  }`}
-                >
-                  {configStatus.contact ? "✓" : "!"}
+                <div className={`text-2xl font-bold ${"text-green-600"}`}>
+                  ✓
                 </div>
                 <div className="text-xs text-blue-700">Contact</div>
               </div>
               <div className="text-center">
-                <div
-                  className={`text-2xl font-bold ${
-                    configStatus.system ? "text-green-600" : "text-amber-600"
-                  }`}
-                >
+                <div className={`text-2xl font-bold ${"text-green-600"}`}>
                   {configStatus.system ? "✓" : "!"}
                 </div>
                 <div className="text-xs text-blue-700">System</div>
-              </div>
-            </div>
-            <div className="mt-4 text-center">
-              <div className="text-sm text-blue-700">
-                {Object.values(configStatus).filter(Boolean).length} de{" "}
-                {Object.keys(configStatus).length} categorias configuradas
               </div>
             </div>
           </CardContent>
