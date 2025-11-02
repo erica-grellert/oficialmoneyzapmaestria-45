@@ -8,12 +8,15 @@ import {
   Receipt,
   Settings,
   Crown,
-  Plus,
+  List,
   Target,
   Calendar,
   Shield,
   User,
   FileText,
+  User2,
+  Gift,
+  Tag,
 } from "lucide-react";
 import {
   Popover,
@@ -39,29 +42,20 @@ const MobileNavBar: React.FC<MobileNavBarProps> = ({ onAddTransaction }) => {
 
   const quickActionItems = [
     {
-      icon: Receipt,
-      label: "Transações",
+      icon: Tag,
+      label: "Categorias",
       action: () => {
-        navigate("/transactions");
+        navigate("/categories");
         setIsQuickActionsOpen(false);
       },
-      color: "text-blue-600",
-      bgColor: "bg-blue-50 hover:bg-blue-100",
+      color: "text-green-600",
+      bgColor: "bg-green-50 hover:bg-green-100",
     },
     {
       icon: Target,
       label: t("nav.goals") || "Metas",
       action: () => {
         navigate("/goals");
-        setIsQuickActionsOpen(false);
-      },
-      color: "text-blue-600",
-      bgColor: "bg-blue-50 hover:bg-blue-100",
-    },
-    {
-      icon: Calendar,
-      label: "Agendamentos",
-      action: () => {
         setIsQuickActionsOpen(false);
       },
       color: "text-purple-600",
@@ -76,6 +70,16 @@ const MobileNavBar: React.FC<MobileNavBarProps> = ({ onAddTransaction }) => {
       },
       color: "text-orange-600",
       bgColor: "bg-orange-50 hover:bg-orange-100",
+    },
+    {
+      icon: Gift,
+      label: "Indicações",
+      action: () => {
+        navigate("/referral");
+        setIsQuickActionsOpen(false);
+      },
+      color: "text-yellow-600",
+      bgColor: "bg-yellow-50 hover:bg-orange-100",
     },
   ];
 
@@ -111,7 +115,9 @@ const MobileNavBar: React.FC<MobileNavBarProps> = ({ onAddTransaction }) => {
               }
             >
               <item.icon className="h-4 w-4 xs:h-5 xs:w-5 mb-1 group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] xs:text-xs font-medium truncate leading-tight">{item.label}</span>
+              <span className="text-[10px] xs:text-xs font-medium truncate leading-tight">
+                {item.label}
+              </span>
             </NavLink>
           ))}
         </nav>
@@ -123,29 +129,24 @@ const MobileNavBar: React.FC<MobileNavBarProps> = ({ onAddTransaction }) => {
   const defaultMenuItems = [
     {
       icon: LayoutDashboard,
-      label: t("nav.dashboard"),
+      label: "Painel",
       href: "/dashboard",
     },
     {
       icon: Receipt,
-      label: t("nav.transactions"),
+      label: "Transações",
       href: "/transactions",
     },
     {
+      icon: User2,
+      label: "Perfil",
+      href: "/profile",
+    },
+    {
       type: "quick-actions",
-      icon: Plus,
-      label: "",
+      icon: List,
+      label: "Menu",
       href: "#",
-    },
-    {
-      icon: Crown,
-      label: t("nav.plans"),
-      href: "/plans",
-    },
-    {
-      icon: Settings,
-      label: t("nav.settings"),
-      href: "/settings",
     },
   ];
 
@@ -160,7 +161,7 @@ const MobileNavBar: React.FC<MobileNavBarProps> = ({ onAddTransaction }) => {
       href: "/admin",
     };
 
-    // Adicionar o item admin antes do último item (settings)
+    // Adicionar o item admin antes do Menu (último item)
     menuItems = [
       ...defaultMenuItems.slice(0, -1),
       adminMenuItem,
@@ -224,10 +225,10 @@ const MobileNavBar: React.FC<MobileNavBarProps> = ({ onAddTransaction }) => {
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95"
                     )}
                   >
-                    <div className="rounded-full bg-primary text-primary-foreground p-1.5 xs:p-2 shadow-lg group-hover:scale-110 transition-transform">
-                      <Plus className="h-5 w-5 xs:h-6 xs:w-6" />
-                    </div>
-                    <span className="text-[10px] xs:text-xs font-medium leading-tight">Ações</span>
+                    <List className="h-4 w-4 xs:h-5 xs:w-5 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="text-[10px] xs:text-xs font-medium truncate leading-tight">
+                      Menu
+                    </span>
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
@@ -280,7 +281,9 @@ const MobileNavBar: React.FC<MobileNavBarProps> = ({ onAddTransaction }) => {
               }
             >
               <item.icon className="h-4 w-4 xs:h-5 xs:w-5 mb-1 group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] xs:text-xs font-medium truncate leading-tight">{item.label}</span>
+              <span className="text-[10px] xs:text-xs font-medium truncate leading-tight">
+                {item.label}
+              </span>
             </NavLink>
           );
         })}

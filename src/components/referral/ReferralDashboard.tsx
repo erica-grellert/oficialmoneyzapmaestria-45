@@ -21,7 +21,6 @@ import {
   generateReferralLink,
   hasActiveReferralBonus,
   getReferralBonusExpiry,
-  debugReferralDatabase,
   ReferralInfo,
 } from "@/services/referralService";
 
@@ -32,9 +31,7 @@ interface ReferralDashboardProps {
 const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ className }) => {
   const { toast } = useToast();
   const [referralInfo, setReferralInfo] = useState<ReferralInfo | null>(null);
-  const [referredUsers, setReferredUsers] = useState<
-    Array<{ id: string; name: string; email: string; created_at: string }>
-  >([]);
+
   const [hasBonus, setHasBonus] = useState(false);
   const [bonusExpiry, setBonusExpiry] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,15 +41,13 @@ const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ className }) => {
     try {
       setIsLoading(true);
 
-      const [info, users, hasActiveBonus, expiry] = await Promise.all([
+      const [info, hasActiveBonus, expiry] = await Promise.all([
         getCurrentUserReferralInfo(),
-        getReferredUsers(),
         hasActiveReferralBonus(),
         getReferralBonusExpiry(),
       ]);
 
       setReferralInfo(info);
-      setReferredUsers(users);
       setHasBonus(hasActiveBonus);
       setBonusExpiry(expiry);
     } catch (error) {
@@ -119,10 +114,10 @@ const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ className }) => {
 
   if (isLoading) {
     return (
-      <div className={`space-y-6 ${className}`}>
+      <div className={`space-y-4 xs:space-y-6 ${className}`}>
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
+          <div className="h-6 xs:h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-24 xs:h-32 bg-gray-200 rounded"></div>
         </div>
       </div>
     );
@@ -141,63 +136,71 @@ const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ className }) => {
   }
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-4 xs:space-y-6 ${className}`}>
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">
+      <div className="px-1 xs:px-0">
+        <h2 className="text-xl xs:text-2xl font-bold text-gray-900">
           Programa de Indicações
         </h2>
-        <p className="text-gray-600 mt-1">
+        <p className="text-sm xs:text-base text-gray-600 mt-1 xs:mt-2">
           Indique amigos e ganhe 30 dias grátis para cada indicação!
         </p>
       </div>
 
       {/* Referral Code Card */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Gift className="h-5 w-5 text-primary" />
-            Seu Código de Indicação
+        <CardHeader className="pb-3 xs:pb-6">
+          <CardTitle className="flex items-center gap-2 text-base xs:text-lg">
+            <Gift className="h-4 w-4 xs:h-5 xs:w-5 text-primary flex-shrink-0" />
+            <span>Seu Código de Indicação</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <Label htmlFor="referralCode">Código</Label>
+        <CardContent className="space-y-4 xs:space-y-6">
+          <div className="space-y-3 xs:space-y-0 xs:flex xs:items-end xs:gap-2">
+            <div className="flex-1 min-w-0">
+              <Label htmlFor="referralCode" className="text-sm xs:text-base">
+                Código
+              </Label>
               <Input
                 id="referralCode"
                 value={referralInfo.referral_code}
                 readOnly
-                className="font-mono text-lg font-bold"
+                className="font-mono text-base xs:text-lg font-bold mt-1 xs:mt-0"
               />
             </div>
-            <div className="flex gap-2 mt-6">
+            <div className="flex flex-col xs:flex-row gap-2 xs:gap-2 xs:mt-6">
               <Button
                 onClick={handleCopyReferralLink}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2"
+                className="flex items-center justify-center gap-2 w-full xs:w-auto min-h-[44px] touch-manipulation"
               >
                 {copied ? (
-                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
                 ) : (
-                  <Copy className="h-4 w-4" />
+                  <Copy className="h-4 w-4 flex-shrink-0" />
                 )}
-                {copied ? "Copiado!" : "Copiar"}
+                <span className="xs:hidden">
+                  {copied ? "Copiado!" : "Copiar Código"}
+                </span>
+                <span className="hidden xs:inline">
+                  {copied ? "Copiado!" : "Copiar"}
+                </span>
               </Button>
               <Button
                 onClick={handleShareReferralLink}
                 size="sm"
-                className="flex items-center gap-2"
+                className="flex items-center justify-center gap-2 w-full xs:w-auto min-h-[44px] touch-manipulation"
               >
-                <Share2 className="h-4 w-4" />
-                Compartilhar
+                <Share2 className="h-4 w-4 flex-shrink-0" />
+                <span className="xs:hidden">Compartilhar Código</span>
+                <span className="hidden xs:inline">Compartilhar</span>
               </Button>
             </div>
           </div>
 
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
+          <div className="p-3 xs:p-4 bg-blue-50 rounded-lg">
+            <p className="text-xs xs:text-sm text-blue-800 leading-relaxed">
               <strong>Como funciona:</strong> Compartilhe seu código com amigos.
               Quando eles se cadastrarem usando seu código, você ganha 30 dias
               grátis!
@@ -207,34 +210,36 @@ const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ className }) => {
       </Card>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xs:gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Users className="h-5 w-5 text-green-600" />
+          <CardContent className="p-3 xs:p-4">
+            <div className="flex items-center gap-2 xs:gap-3">
+              <div className="p-2 xs:p-2.5 bg-green-100 rounded-lg flex-shrink-0">
+                <Users className="h-4 w-4 xs:h-5 xs:w-5 text-green-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
+              <div className="min-w-0 flex-1">
+                <p className="text-xl xs:text-2xl font-bold text-gray-900">
                   {referralInfo.total_referrals}
                 </p>
-                <p className="text-sm text-gray-600">Total de Indicações</p>
+                <p className="text-xs xs:text-sm text-gray-600 truncate">
+                  Total de Indicações
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Calendar className="h-5 w-5 text-blue-600" />
+          <CardContent className="p-3 xs:p-4">
+            <div className="flex items-center gap-2 xs:gap-3">
+              <div className="p-2 xs:p-2.5 bg-blue-100 rounded-lg flex-shrink-0">
+                <Calendar className="h-4 w-4 xs:h-5 xs:w-5 text-blue-600" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
+              <div className="min-w-0 flex-1">
+                <p className="text-xl xs:text-2xl font-bold text-gray-900">
                   {referralInfo.recent_referrals}
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-xs xs:text-sm text-gray-600 truncate">
                   Indicações nos Últimos 30 Dias
                 </p>
               </div>
@@ -262,16 +267,16 @@ const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ className }) => {
       {/* Active Bonus Status */}
       {hasBonus && bonusExpiry && (
         <Card className="border-green-200 bg-green-50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Clock className="h-5 w-5 text-green-600" />
+          <CardContent className="p-3 xs:p-4">
+            <div className="flex items-center gap-2 xs:gap-3">
+              <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
+                <Clock className="h-4 w-4 xs:h-5 xs:w-5 text-green-600" />
               </div>
-              <div>
-                <p className="font-semibold text-green-800">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm xs:text-base font-semibold text-green-800">
                   🎉 Bônus de Indicação Ativo!
                 </p>
-                <p className="text-sm text-green-700">
+                <p className="text-xs xs:text-sm text-green-700">
                   Válido até {bonusExpiry.toLocaleDateString("pt-BR")}
                 </p>
               </div>

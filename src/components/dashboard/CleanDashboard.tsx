@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import SubscriptionGuard from "@/components/subscription/SubscriptionGuard";
 import TopBar from "@/components/navigation/TopBar";
+import MobileNavBar from "@/components/layout/MobileNavBar";
 import DashboardHeader from "./DashboardHeader";
 import QuickActions from "./QuickActions";
 import KPICards from "./KPICards";
@@ -97,6 +98,13 @@ const CleanDashboard = () => {
     }),
     [accumulatedBalance, monthlyIncome, monthlyExpenses, goals]
   );
+
+  // Handler for MobileNavBar
+  const handleAddTransactionFromNav = (type: "income" | "expense") => {
+    setTransactionFormOpen(true);
+    setTransactionFormMode("create");
+    setTransactionDefaultType(type);
+  };
 
   // Quick Actions Handlers
   const handleWithdraw = () => {
@@ -282,6 +290,9 @@ const CleanDashboard = () => {
         <div className="block md:hidden">
           <FloatingActionButton />
         </div>
+
+        {/* Mobile Navigation Bar */}
+        <MobileNavBar onAddTransaction={handleAddTransactionFromNav} />
 
         <TransactionFormV2
           open={transactionFormOpen}

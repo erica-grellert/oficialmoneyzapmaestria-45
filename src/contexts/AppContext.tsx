@@ -336,19 +336,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
   // Update filtered transactions when transactions or time range changes
   useEffect(() => {
-    // console.log('[DEBUG] AppContext: Filtering transactions...', {
-    //   totalTransactions: state.transactions.length,
-    //   timeRange: state.timeRange,
-    //   customStartDate: state.customStartDate,
-    //   customEndDate: state.customEndDate
-    // });
-
     const filtered = filterTransactionsByTimeRange(state.transactions);
-
-    // console.log('[DEBUG] AppContext: Filtered transactions:', {
-    //   filteredCount: filtered.length,
-    //   transactions: filtered.map(t => ({ id: t.id, amount: t.amount, date: t.date, type: t.type }))
-    // });
 
     dispatch({ type: "SET_FILTERED_TRANSACTIONS", payload: filtered });
   }, [
