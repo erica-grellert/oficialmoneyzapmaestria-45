@@ -21,15 +21,15 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
         variant="ghost"
         onClick={() => onChange("income")}
         className={cn(
-          "flex-1 h-11 rounded-full transition-all duration-200 font-medium",
-          "hover:bg-white",
+          "flex-1 h-10 xs:h-11 rounded-full transition-all duration-200 font-medium min-h-[44px] touch-manipulation",
+          "hover:bg-white active:scale-95",
           value === "income"
             ? "bg-emerald-50 text-emerald-700 shadow-sm ring-2 ring-emerald-200"
             : "text-slate-600 hover:text-slate-900"
         )}
       >
-        <TrendingUp className="h-4 w-4 mr-2" />
-        Receita
+        <TrendingUp className="h-4 w-4 mr-1.5 xs:mr-2 flex-shrink-0" />
+        <span className="text-sm xs:text-base">Receita</span>
       </Button>
 
       <Button
@@ -37,15 +37,15 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
         variant="ghost"
         onClick={() => onChange("expense")}
         className={cn(
-          "flex-1 h-11 rounded-full transition-all duration-200 font-medium",
-          "hover:bg-white",
+          "flex-1 h-10 xs:h-11 rounded-full transition-all duration-200 font-medium min-h-[44px] touch-manipulation",
+          "hover:bg-white active:scale-95",
           value === "expense"
             ? "bg-red-50 text-red-700 shadow-sm ring-2 ring-red-200"
             : "text-slate-600 hover:text-slate-900"
         )}
       >
-        <TrendingDown className="h-4 w-4 mr-2" />
-        Despesa
+        <TrendingDown className="h-4 w-4 mr-1.5 xs:mr-2 flex-shrink-0" />
+        <span className="text-sm xs:text-base">Despesa</span>
       </Button>
     </div>
   );

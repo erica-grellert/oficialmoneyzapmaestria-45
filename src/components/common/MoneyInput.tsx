@@ -72,7 +72,7 @@ export const MoneyInput: React.FC<MoneyInputProps> = ({
 
   return (
     <div className="relative">
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 font-medium text-lg pointer-events-none">
+      <div className="absolute left-3 xs:left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 font-medium text-base xs:text-lg pointer-events-none">
         R$
       </div>
       <Input
@@ -85,9 +85,10 @@ export const MoneyInput: React.FC<MoneyInputProps> = ({
         onFocus={handleFocus}
         placeholder="0,00"
         className={cn(
-          "pl-12 pr-4 h-14 text-2xl font-semibold text-slate-900 dark:text-slate-100",
-          "border-slate-200 dark:border-slate-700 rounded-2xl",
+          "pl-10 xs:pl-12 pr-4 h-12 xs:h-14 text-xl xs:text-2xl font-semibold text-slate-900 dark:text-slate-100",
+          "border-slate-200 dark:border-slate-700 rounded-xl xs:rounded-2xl",
           "focus:border-slate-900 dark:focus:border-slate-100 focus:ring-2 focus:ring-slate-900/20 dark:focus:ring-slate-100/20",
+          "min-h-[44px] touch-manipulation",
           error &&
             "border-red-500 dark:border-red-400 focus:border-red-500 dark:focus:border-red-400",
           className
@@ -96,7 +97,7 @@ export const MoneyInput: React.FC<MoneyInputProps> = ({
         autoFocus
       />
       {error && (
-        <p className="text-sm text-red-600 dark:text-red-400 mt-1">{error}</p>
+        <p className="text-xs xs:text-sm text-red-600 dark:text-red-400 mt-1">{error}</p>
       )}
     </div>
   );

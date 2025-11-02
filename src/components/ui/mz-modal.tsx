@@ -66,11 +66,11 @@ export const MzModal: React.FC<MzModalProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "sm:max-w-[720px] w-full max-w-[95vw] p-0 gap-0 rounded-3xl border-[1px] shadow-lg backdrop-blur-sm",
+          "sm:max-w-[720px] w-full max-w-[95vw] p-0 gap-0 rounded-2xl xs:rounded-3xl border-[1px] shadow-lg backdrop-blur-sm",
           "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900",
           "animate-in fade-in-0 zoom-in-98 slide-in-from-bottom-3 duration-200",
+          "max-h-[95vh] sm:max-h-[90vh]",
           variant === "fullscreen" && "sm:max-w-[95vw] sm:max-h-[95vh]",
-
           className
         )}
         style={{
@@ -78,33 +78,33 @@ export const MzModal: React.FC<MzModalProps> = ({
         }}
       >
         {/* Custom Header */}
-        <DialogHeader className="flex flex-row items-center justify-between p-6 pb-4 space-y-0">
-          <div className="flex items-center gap-4">
+        <DialogHeader className="flex flex-row items-center justify-between p-4 xs:p-6 pb-3 xs:pb-4 space-y-0">
+          <div className="flex items-center gap-2 xs:gap-4 min-w-0 flex-1">
             {/* Icon Circle */}
-            <div className="w-12 h-12  bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-              <IconComponent className="h-6 w-6 text-slate-600 dark:text-slate-300" />
+            <div className="w-10 h-10 xs:w-12 xs:h-12 bg-slate-100 dark:bg-slate-800 flex items-center justify-center rounded-lg xs:rounded-xl flex-shrink-0">
+              <IconComponent className="h-5 w-5 xs:h-6 xs:w-6 text-slate-600 dark:text-slate-300" />
             </div>
 
             {/* Title & Subtitle */}
-            <div className="flex-1">
-              <DialogTitle className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-1">
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-lg xs:text-xl font-semibold text-slate-900 dark:text-slate-100 mb-0.5 xs:mb-1 truncate">
                 {title}
               </DialogTitle>
               {subtitle && (
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-xs xs:text-sm text-slate-500 dark:text-slate-400 line-clamp-2 xs:line-clamp-1">
                   {subtitle}
                 </p>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Context Badge */}
+          <div className="flex items-center gap-2 xs:gap-3 flex-shrink-0">
+            {/* Context Badge - Hide on very small screens */}
             {badge && (
               <Badge
                 variant="outline"
                 className={cn(
-                  "px-3 py-1 text-xs font-medium",
+                  "hidden xs:inline-flex px-2 xs:px-3 py-1 text-xs font-medium whitespace-nowrap",
                   getBadgeStyles(badge.variant)
                 )}
               >
@@ -115,30 +115,32 @@ export const MzModal: React.FC<MzModalProps> = ({
         </DialogHeader>
 
         {/* Content */}
-        <div className="flex-1 p-6 max-h-[calc(85vh-140px)] overflow-y-auto">
+        <div className="flex-1 p-4 xs:p-6 overflow-y-auto" style={{ maxHeight: "calc(95vh - 200px)" }}>
           {children}
         </div>
 
         {/* Action Rail Footer */}
         {(primaryAction || secondaryAction || tertiaryAction) && (
-          <div className="flex items-center justify-between p-6 pt-4">
-            <div className="flex items-center gap-2">
-              {tertiaryAction && (
+          <div className="border-t border-slate-200 dark:border-slate-700">
+            {/* Mobile: Stack all actions vertically, Primary first */}
+            <div className="flex flex-col gap-2 p-4 xs:p-6 pt-4 xs:pt-4 sm:hidden">
+              {primaryAction && (
                 <Button
-                  variant={tertiaryAction.variant || "ghost"}
-                  onClick={tertiaryAction.onClick}
+                  variant={primaryAction.variant || "default"}
+                  onClick={primaryAction.onClick}
+                  disabled={primaryAction.loading}
+                  className="w-full min-h-[48px] touch-manipulation text-base font-medium"
                 >
-                  {tertiaryAction.label}
+                  {primaryAction.loading ? "Salvando..." : primaryAction.label}
                 </Button>
               )}
-            </div>
-
-            <div className="flex items-center gap-2">
+              
               {secondaryAction && (
                 <Button
                   variant={secondaryAction.variant || "outline"}
                   onClick={secondaryAction.onClick}
                   disabled={secondaryAction.loading}
+                  className="w-full min-h-[48px] touch-manipulation text-base font-medium"
                 >
                   {secondaryAction.loading
                     ? "Salvando..."
@@ -146,22 +148,63 @@ export const MzModal: React.FC<MzModalProps> = ({
                 </Button>
               )}
 
-              {primaryAction && (
+              {tertiaryAction && (
                 <Button
-                  variant={primaryAction.variant || "default"}
-                  onClick={primaryAction.onClick}
-                  disabled={primaryAction.loading}
+                  variant={tertiaryAction.variant || "ghost"}
+                  onClick={tertiaryAction.onClick}
+                  className="w-full min-h-[44px] touch-manipulation text-base"
                 >
-                  {primaryAction.loading ? "Salvando..." : primaryAction.label}
+                  {tertiaryAction.label}
                 </Button>
               )}
+            </div>
+
+            {/* Desktop: Horizontal layout */}
+            <div className="hidden sm:flex items-center justify-between gap-2 p-6 pt-4">
+              <div className="flex items-center gap-2">
+                {tertiaryAction && (
+                  <Button
+                    variant={tertiaryAction.variant || "ghost"}
+                    onClick={tertiaryAction.onClick}
+                    className="min-h-[44px] touch-manipulation"
+                  >
+                    {tertiaryAction.label}
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {secondaryAction && (
+                  <Button
+                    variant={secondaryAction.variant || "outline"}
+                    onClick={secondaryAction.onClick}
+                    disabled={secondaryAction.loading}
+                    className="min-h-[44px] touch-manipulation"
+                  >
+                    {secondaryAction.loading
+                      ? "Salvando..."
+                      : secondaryAction.label}
+                  </Button>
+                )}
+
+                {primaryAction && (
+                  <Button
+                    variant={primaryAction.variant || "default"}
+                    onClick={primaryAction.onClick}
+                    disabled={primaryAction.loading}
+                    className="min-h-[44px] touch-manipulation"
+                  >
+                    {primaryAction.loading ? "Salvando..." : primaryAction.label}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
 
         {/* Keyboard Shortcut Hint */}
         {primaryAction && (
-          <div className="absolute bottom-2 left-6 text-xs text-slate-400 dark:text-slate-500">
+          <div className="hidden xs:block absolute bottom-2 left-6 text-xs text-slate-400 dark:text-slate-500">
             Ctrl/Cmd + Enter para salvar
           </div>
         )}

@@ -18,7 +18,7 @@ export const CategoryChips: React.FC<CategoryChipsProps> = ({
   className,
 }) => {
   return (
-    <div className={cn("flex flex-wrap gap-2", className)}>
+    <div className={cn("flex flex-wrap gap-2 xs:gap-2.5", className)}>
       {categories.map((category) => (
         <Button
           key={category.id}
@@ -27,8 +27,8 @@ export const CategoryChips: React.FC<CategoryChipsProps> = ({
           size="sm"
           onClick={() => onSelect(category.id)}
           className={cn(
-            "h-9 px-3 rounded-full transition-all duration-200",
-            "border-slate-200 hover:bg-slate-800 hover:text-white",
+            "h-9 xs:h-10 px-3 xs:px-4 rounded-full transition-all duration-200 min-h-[36px] touch-manipulation",
+            "border-slate-200 hover:bg-slate-800 hover:text-white active:scale-95",
             selectedId === category.id &&
               "border-slate-100 bg-slate-800 text-white border-slate-800"
           )}
@@ -37,9 +37,9 @@ export const CategoryChips: React.FC<CategoryChipsProps> = ({
             icon={category.icon}
             color={category.color}
             size={16}
-            className="mr-1.5"
+            className="mr-1 xs:mr-1.5 flex-shrink-0"
           />
-          <span className="text-xs font-medium">{category.name}</span>
+          <span className="text-xs xs:text-sm font-medium whitespace-nowrap">{category.name}</span>
         </Button>
       ))}
     </div>

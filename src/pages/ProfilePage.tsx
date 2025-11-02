@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import AppLayout from "@/components/layout/AppLayout";
 import { useAdaptiveContext } from "@/hooks/useAdaptiveContext";
 import {
   usePreferences,
@@ -365,7 +366,8 @@ const ProfilePage = () => {
 
   if (isAdminFromAdminPage) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <AppLayout showFAB={false}>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
         {/* Header with back button */}
         <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-600 shadow-sm">
           <div className="max-w-4xl mx-auto px-4 py-4">
@@ -597,11 +599,13 @@ const ProfilePage = () => {
           </div>
         </div>
       </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <AppLayout showFAB={false}>
+      <div className="min-h-screen from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       {/* Header with back button */}
       <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-600 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
@@ -1022,6 +1026,7 @@ const ProfilePage = () => {
         </div>
       </div>
     </div>
+    </AppLayout>
   );
 };
 

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import TopBar from '@/components/navigation/TopBar';
-import BottomNav from '@/components/navigation/BottomNav';
+import MobileNavBar from '@/components/layout/MobileNavBar';
 import FloatingActionButton from '@/components/navigation/FloatingActionButton';
 import { cn } from '@/lib/utils';
+import { TransactionFormV2 } from '@/components/common/TransactionFormV2';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -15,6 +16,14 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   className, 
   showFAB = true 
 }) => {
+  const [formOpen, setFormOpen] = useState(false);
+  const [defaultTransactionType, setDefaultTransactionType] = useState<'income' | 'expense'>('expense');
+
+  const handleAddTransaction = (type: 'income' | 'expense') => {
+    setDefaultTransactionType(type);
+    setFormOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <TopBar />
@@ -27,9 +36,16 @@ const AppLayout: React.FC<AppLayoutProps> = ({
         {children}
       </main>
 
-      <BottomNav />
+      <MobileNavBar onAddTransaction={handleAddTransaction} />
       
       {showFAB && <FloatingActionButton />}
+
+      <TransactionFormV2
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        mode="create"
+        defaultType={defaultTransactionType}
+      />
     </div>
   );
 };

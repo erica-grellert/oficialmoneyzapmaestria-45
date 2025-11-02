@@ -266,10 +266,10 @@ export const TransactionFormV2: React.FC<TransactionFormV2Props> = ({
       }}
     >
       <Form {...form}>
-        <form className="space-y-6">
+        <form className="space-y-4 xs:space-y-6">
           {/* Type Selector */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">
+            <label className="text-sm xs:text-base font-medium text-slate-700">
               Tipo de movimentação
             </label>
             <SegmentedControl
@@ -279,9 +279,9 @@ export const TransactionFormV2: React.FC<TransactionFormV2Props> = ({
           </div>
 
           {/* Amount & Date Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 xs:gap-4">
             <div className="lg:col-span-2 space-y-2">
-              <label className="text-sm font-medium text-slate-700">
+              <label className="text-sm xs:text-base font-medium text-slate-700">
                 Valor *
               </label>
               <FormField
@@ -298,7 +298,9 @@ export const TransactionFormV2: React.FC<TransactionFormV2Props> = ({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Data</label>
+              <label className="text-sm xs:text-base font-medium text-slate-700">
+                Data
+              </label>
               <FormField
                 control={form.control}
                 name="date"
@@ -310,11 +312,11 @@ export const TransactionFormV2: React.FC<TransactionFormV2Props> = ({
                           <Button
                             variant="outline"
                             className={cn(
-                              "w-full h-12 justify-start text-left font-normal rounded-xl",
+                              "w-full h-11 xs:h-12 justify-start text-left font-normal rounded-xl text-sm xs:text-base min-h-[44px] touch-manipulation",
                               !field.value && "text-muted-foreground"
                             )}
                           >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
                             {field.value ? (
                               format(
                                 createLocalDate(field.value),
@@ -330,7 +332,7 @@ export const TransactionFormV2: React.FC<TransactionFormV2Props> = ({
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <div className="p-3 border-b">
+                        <div className="p-2 xs:p-3 border-b">
                           <div className="flex gap-2">
                             {getQuickDates().map((quickDate) => (
                               <Button
@@ -342,7 +344,7 @@ export const TransactionFormV2: React.FC<TransactionFormV2Props> = ({
                                     format(quickDate.date, "yyyy-MM-dd")
                                   );
                                 }}
-                                className="text-xs"
+                                className="text-xs min-h-[36px] touch-manipulation"
                               >
                                 {quickDate.label}
                               </Button>
@@ -375,9 +377,9 @@ export const TransactionFormV2: React.FC<TransactionFormV2Props> = ({
           </div>
 
           {/* Category Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 space-y-3">
-              <label className="text-sm font-medium text-slate-700">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 xs:gap-4">
+            <div className="lg:col-span-2 space-y-2 xs:space-y-3">
+              <label className="text-sm xs:text-base font-medium text-slate-700">
                 Categoria *
               </label>
 
@@ -411,7 +413,7 @@ export const TransactionFormV2: React.FC<TransactionFormV2Props> = ({
 
           {/* Description */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">
+            <label className="text-sm xs:text-base font-medium text-slate-700">
               Descrição
             </label>
             <FormField
@@ -423,7 +425,7 @@ export const TransactionFormV2: React.FC<TransactionFormV2Props> = ({
                     <Textarea
                       {...field}
                       placeholder="Ex.: Jantar com clientes, Compra no mercado..."
-                      className="min-h-[80px] rounded-xl resize-none"
+                      className="min-h-[80px] xs:min-h-[100px] rounded-xl resize-none text-sm xs:text-base"
                       maxLength={140}
                     />
                   </FormControl>
