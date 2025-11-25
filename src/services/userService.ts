@@ -96,3 +96,30 @@ export const getUserAchievements = async (): Promise<any[]> => {
     return [];
   }
 };
+
+export interface ActiveUser {
+  id: string;
+  name: string | null;
+  email: string;
+  phone: string | null;
+}
+
+export const getActiveUsers = async (): Promise<ActiveUser[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("moneyzap_users")
+      .select("id, name, email, phone")
+      .eq("is_active", true)
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching active users:", error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error("Error getting active users:", error);
+    return [];
+  }
+};
