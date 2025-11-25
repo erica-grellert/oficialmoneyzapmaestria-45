@@ -182,6 +182,82 @@ const AdminDashboard: React.FC = () => {
     };
   }, []);
 
+  const renderDashboardContent = (isMobile: boolean) => {
+    const containerClass = isMobile ? "w-full" : "w-full max-w-7xl mx-auto";
+    const cardClass = isMobile
+      ? "border-slate-200 bg-white/80 backdrop-blur-sm"
+      : "border-slate-200 bg-white/90 backdrop-blur-sm shadow-soft";
+    const titleClass = isMobile ? "text-slate-800" : "text-slate-800 text-xl";
+
+    return (
+      <motion.div
+        className={containerClass}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="mb-8">
+          <div
+            className={`flex items-center gap-4 ${isMobile ? "mb-6" : "mb-8"}`}
+          >
+            <div
+              className={`p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl ${
+                !isMobile ? "shadow-lg" : ""
+              }`}
+            >
+              <Shield
+                className={`${isMobile ? "h-10 w-10" : "h-12 w-12"} text-white`}
+              />
+            </div>
+            <div className="flex-1">
+              <h1
+                className={`${
+                  isMobile ? "text-4xl" : "text-5xl"
+                } font-bold bg-gradient-to-r from-slate-900 ${
+                  isMobile ? "to-blue-800" : "via-blue-800 to-purple-800"
+                } bg-clip-text text-transparent`}
+              >
+                Centro de Controle
+              </h1>
+              <p
+                className={`text-slate-600 ${
+                  isMobile ? "mt-2 text-lg" : "mt-3 text-xl"
+                }`}
+              >
+                Monitore e gerencie todo o ecossistema da plataforma
+                {!isMobile && " com ferramentas avançadas"}
+              </p>
+            </div>
+            <Button
+              onClick={handleProfileClick}
+              variant="outline"
+              className={`border-blue-200 text-blue-600 hover:bg-blue-50 ${
+                isMobile ? "px-4 py-2" : "px-6 py-3"
+              }`}
+            >
+              <Shield className={`${isMobile ? "h-4 w-4" : "h-5 w-5"} mr-2`} />
+              Perfil
+            </Button>
+          </div>
+        </div>
+
+        {renderStatusOverview()}
+
+        {/* Navegação por Abas */}
+        <Card className={cardClass}>
+          <CardHeader>
+            <CardTitle className={titleClass}>
+              Gerenciamento do Sistema
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AdminSectionTabs />
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  };
+
   const renderStatusOverview = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -327,50 +403,7 @@ const AdminDashboard: React.FC = () => {
                     <AdminProfileConfig />
                   </motion.div>
                 ) : (
-                  <motion.div
-                    className="w-full"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <div className="mb-8">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl">
-                          <Shield className="h-10 w-10 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 to-blue-800 bg-clip-text text-transparent">
-                            Centro de Controle
-                          </h1>
-                          <p className="text-slate-600 mt-2 text-lg">
-                            Monitore e gerencie todo o ecossistema da plataforma
-                          </p>
-                        </div>
-                        <Button
-                          onClick={handleProfileClick}
-                          variant="outline"
-                          className="border-blue-200 text-blue-600 hover:bg-blue-50 px-4 py-2"
-                        >
-                          <Shield className="h-4 w-4 mr-2" />
-                          Perfil
-                        </Button>
-                      </div>
-                    </div>
-
-                    {renderStatusOverview()}
-
-                    {/* Navegação por Abas */}
-                    <Card className="border-slate-200 bg-white/80 backdrop-blur-sm">
-                      <CardHeader>
-                        <CardTitle className="text-slate-800">
-                          Gerenciamento do Sistema
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <AdminSectionTabs />
-                      </CardContent>
-                    </Card>
-                  </motion.div>
+                  renderDashboardContent(true)
                 )}
               </div>
             </main>
@@ -411,51 +444,7 @@ const AdminDashboard: React.FC = () => {
                   <AdminProfileConfig />
                 </motion.div>
               ) : (
-                <motion.div
-                  className="w-full max-w-7xl mx-auto"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <div className="mb-8">
-                    <div className="flex items-center gap-4 mb-8">
-                      <div className="p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg">
-                        <Shield className="h-12 w-12 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <h1 className="text-5xl font-bold bg-gradient-to-r from-slate-900 via-blue-800 to-purple-800 bg-clip-text text-transparent">
-                          Centro de Controle
-                        </h1>
-                        <p className="text-slate-600 mt-3 text-xl">
-                          Monitore e gerencie todo o ecossistema da plataforma
-                          com ferramentas avançadas
-                        </p>
-                      </div>
-                      <Button
-                        onClick={handleProfileClick}
-                        variant="outline"
-                        className="border-blue-200 text-blue-600 hover:bg-blue-50 px-6 py-3"
-                      >
-                        <Shield className="h-5 w-5 mr-2" />
-                        Perfil
-                      </Button>
-                    </div>
-                  </div>
-
-                  {renderStatusOverview()}
-
-                  {/* Navegação por Abas */}
-                  <Card className="border-slate-200 bg-white/90 backdrop-blur-sm shadow-soft">
-                    <CardHeader>
-                      <CardTitle className="text-slate-800 text-xl">
-                        Gerenciamento do Sistema
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <AdminSectionTabs />
-                    </CardContent>
-                  </Card>
-                </motion.div>
+                renderDashboardContent(false)
               )}
             </main>
           </div>
