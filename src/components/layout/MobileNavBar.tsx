@@ -17,6 +17,7 @@ import {
   User2,
   Gift,
   Tag,
+  Mail,
 } from "lucide-react";
 import {
   Popover,
@@ -80,6 +81,32 @@ const MobileNavBar: React.FC<MobileNavBarProps> = ({ onAddTransaction }) => {
       },
       color: "text-yellow-600",
       bgColor: "bg-yellow-50 hover:bg-orange-100",
+    },
+    {
+      icon: Mail,
+      label: "Suporte",
+      action: () => {
+        const subject = encodeURIComponent(
+          "MeuControle-IA - Pedido de Suporte"
+        );
+        window.location.href = `mailto:eutenhocontrole@gmail.com?subject=${subject}`;
+        setIsQuickActionsOpen(false);
+      },
+      color: "text-blue-600",
+      bgColor: "bg-blue-50 hover:bg-blue-100",
+    },
+    {
+      icon: Calendar,
+      label: "Agendar com Especialista",
+      action: () => {
+        const subject = encodeURIComponent(
+          "MeuControle-IA, Agendar Sessão Estratégica"
+        );
+        window.location.href = `mailto:eutenhocontrole@gmail.com?subject=${subject}`;
+        setIsQuickActionsOpen(false);
+      },
+      color: "text-indigo-600",
+      bgColor: "bg-indigo-50 hover:bg-indigo-100",
     },
   ];
 
@@ -256,7 +283,9 @@ const MobileNavBar: React.FC<MobileNavBarProps> = ({ onAddTransaction }) => {
                               className={`w-full justify-start gap-3 h-10 xs:h-11 text-sm xs:text-base ${quickItem.bgColor} ${quickItem.color} touch-manipulation`}
                             >
                               <quickItem.icon className="h-4 w-4 xs:h-5 xs:w-5" />
-                              <span>{quickItem.label}</span>
+                              <span style={{ fontSize: "12px" }}>
+                                {quickItem.label}
+                              </span>
                             </Button>
                           </motion.div>
                         ))}
