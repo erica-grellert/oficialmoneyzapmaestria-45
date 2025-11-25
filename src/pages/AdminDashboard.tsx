@@ -7,24 +7,13 @@ import {
   CardTitle,
 } from "@/components/ui/card-modern";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import AdminProfileConfig from "@/components/admin/AdminProfileConfig";
 import AdminSectionTabs from "@/components/admin/AdminSectionTabs";
 import MobileNavBar from "@/components/layout/MobileNavBar";
 import MobileHeader from "@/components/layout/MobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAdaptiveContext } from "@/hooks/useAdaptiveContext";
-import { useAdminSettings } from "@/hooks/useAdminSettings";
-import {
-  Shield,
-  AlertTriangle,
-  Users,
-  CreditCard,
-  BarChart3,
-  CheckCircle,
-  Clock,
-  LogOut,
-} from "lucide-react";
+import { Shield, Users, CreditCard, BarChart3, LogOut } from "lucide-react";
 import { AdminOptimizedProvider } from "@/contexts/AdminOptimizedContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,11 +23,6 @@ const AdminDashboard: React.FC = () => {
   const isMobile = useIsMobile();
   const { hideValues, toggleHideValues, logout } = useAdaptiveContext();
   const navigate = useNavigate();
-  const {
-    settings,
-    isLoading: settingsLoading,
-    getConfigurationStatus,
-  } = useAdminSettings();
   const [systemStats, setSystemStats] = useState({
     activeUsers: 0,
     totalTransactions: 0,
@@ -199,183 +183,103 @@ const AdminDashboard: React.FC = () => {
   }, []);
 
   const renderStatusOverview = () => {
-    const configStatus = getConfigurationStatus();
-
-    if (settingsLoading || !configStatus) {
-      return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Card className="border-amber-200 bg-amber-50/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-amber-800 text-lg">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
-                Configurações Essenciais
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-amber-500" />
-                  <span className="text-sm text-amber-700">
-                    Carregando configurações...
-                  </span>
-                  <Badge variant="outline" className="ml-auto">
-                    ...
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Configuration Summary Card */}
-        <Card className="border-blue-200 bg-blue-50/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-blue-800 text-lg">
-              <BarChart3 className="h-5 w-5 text-blue-600" />
-              Resumo das Configurações
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="text-center">
-                <div className={`text-2xl font-bold ${"text-green-600"}`}>
-                  ✓
-                </div>
-                <div className="text-xs text-blue-700">Branding</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card
+            variant="interactive"
+            className="p-4 border-blue-200 bg-blue-50/50 h-full"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-700">Usuários</p>
+                <p className="text-xl font-bold text-blue-900">
+                  {systemStats.activeUsers.toLocaleString()}
+                </p>
               </div>
-              <div className="text-center">
-                <div className={`text-2xl font-bold ${"text-green-600"}`}>
-                  ✓
-                </div>
-                <div className="text-xs text-blue-700">Stripe</div>
-              </div>
-              <div className="text-center">
-                <div className={`text-2xl font-bold ${"text-green-600"}`}>
-                  ✓
-                </div>
-                <div className="text-xs text-blue-700">Pricing</div>
-              </div>
-              <div className="text-center">
-                <div className={`text-2xl font-bold ${"text-green-600"}`}>
-                  ✓
-                </div>
-                <div className="text-xs text-blue-700">Contact</div>
-              </div>
-              <div className="text-center">
-                <div className={`text-2xl font-bold ${"text-green-600"}`}>
-                  {configStatus.system ? "✓" : "!"}
-                </div>
-                <div className="text-xs text-blue-700">System</div>
+              <div className="p-2 bg-blue-100 rounded-full">
+                <Users className="h-5 w-5 text-blue-600" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </Card>
+        </motion.div>
 
-        {/* System Stats Cards - 2x2 Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card
+            variant="interactive"
+            className="p-4 border-green-200 bg-green-50/50 h-full"
           >
-            <Card
-              variant="interactive"
-              className="p-4 border-blue-200 bg-blue-50/50 h-full"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-700">Usuários</p>
-                  <p className="text-xl font-bold text-blue-900">
-                    {systemStats.activeUsers.toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-2 bg-blue-100 rounded-full">
-                  <Users className="h-5 w-5 text-blue-600" />
-                </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-700">Transações</p>
+                <p className="text-xl font-bold text-green-900">
+                  {systemStats.totalTransactions.toLocaleString()}
+                </p>
               </div>
-            </Card>
-          </motion.div>
+              <div className="p-2 bg-green-100 rounded-full">
+                <BarChart3 className="h-5 w-5 text-green-600" />
+              </div>
+            </div>
+          </Card>
+        </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card
+            variant="interactive"
+            className="p-4 border-purple-200 bg-purple-50/50 h-full"
           >
-            <Card
-              variant="interactive"
-              className="p-4 border-green-200 bg-green-50/50 h-full"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-700">
-                    Transações
-                  </p>
-                  <p className="text-xl font-bold text-green-900">
-                    {systemStats.totalTransactions.toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-2 bg-green-100 rounded-full">
-                  <BarChart3 className="h-5 w-5 text-green-600" />
-                </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-purple-700">
+                  Assinaturas Ativas
+                </p>
+                <p className="text-xl font-bold text-purple-900">
+                  {systemStats.activeSubscriptions.toLocaleString()}
+                </p>
               </div>
-            </Card>
-          </motion.div>
+              <div className="p-2 bg-purple-100 rounded-full">
+                <CreditCard className="h-5 w-5 text-purple-600" />
+              </div>
+            </div>
+          </Card>
+        </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <Card
+            variant="interactive"
+            className="p-4 border-red-200 bg-red-50/50 h-full"
           >
-            <Card
-              variant="interactive"
-              className="p-4 border-purple-200 bg-purple-50/50 h-full"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-purple-700">
-                    Assinaturas Ativas
-                  </p>
-                  <p className="text-xl font-bold text-purple-900">
-                    {systemStats.activeSubscriptions.toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-2 bg-purple-100 rounded-full">
-                  <CreditCard className="h-5 w-5 text-purple-600" />
-                </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-700">
+                  Assinaturas Canceladas
+                </p>
+                <p className="text-xl font-bold text-red-900">
+                  {systemStats.cancelledSubscriptions?.toLocaleString() || "0"}
+                </p>
               </div>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <Card
-              variant="interactive"
-              className="p-4 border-red-200 bg-red-50/50 h-full"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-red-700">
-                    Assinaturas Canceladas
-                  </p>
-                  <p className="text-xl font-bold text-red-900">
-                    {systemStats.cancelledSubscriptions?.toLocaleString() ||
-                      "0"}
-                  </p>
-                </div>
-                <div className="p-2 bg-red-100 rounded-full">
-                  <CreditCard className="h-5 w-5 text-red-600" />
-                </div>
+              <div className="p-2 bg-red-100 rounded-full">
+                <CreditCard className="h-5 w-5 text-red-600" />
               </div>
-            </Card>
-          </motion.div>
-        </div>
+            </div>
+          </Card>
+        </motion.div>
       </div>
     );
   };
