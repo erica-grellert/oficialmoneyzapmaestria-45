@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Bell, Gift } from "lucide-react";
+import { Bell, Gift, Mail, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +68,34 @@ const TopBar = () => {
         >
           <Gift className="h-5 w-5" />
           <span className="text-xs">Indicações</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          className="flex items-center text-sm text-primary-foreground rounded-md border-amber-300 border"
+          onClick={() => {
+            const subject = encodeURIComponent(
+              "MeuControle-IA - Pedido de Suporte"
+            );
+            window.location.href = `mailto:eutenhocontrole@gmail.com?subject=${subject}`;
+          }}
+        >
+          <Mail className="h-5 w-5" />
+          <span className="text-xs">Suporte</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          className="flex items-center text-sm text-primary-foreground rounded-md border-amber-300 border"
+          onClick={() => {
+            const subject = encodeURIComponent(
+              "MeuControle-IA, Agendar Sessão Estratégica"
+            );
+            window.location.href = `mailto:eutenhocontrole@gmail.com?subject=${subject}`;
+          }}
+        >
+          <Calendar className="h-5 w-5" />
+          <span className="text-xs">Agendar com Especialista</span>
         </Button>
 
         {/* Debug temporário - mostrar estado do usuário */}
