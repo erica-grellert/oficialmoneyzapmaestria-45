@@ -262,12 +262,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       goal_id: dbTransaction.goal_id,
       user_id: dbTransaction.user_id,
       created_at: dbTransaction.created_at,
+      entidade: dbTransaction.entidade ?? 1,
     };
   };
 
   const transformCategory = (dbCategory: any): Category => ({
     ...dbCategory,
     type: dbCategory.type as "income" | "expense",
+    entidade: dbCategory.entidade ?? 1,
   });
 
   const transformGoal = (dbGoal: any): Goal => ({
@@ -621,6 +623,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
           date: transaction.date,
           goal_id: transaction.goalId,
           user_id: user.id,
+          entidade: state.entidadeAtiva,
         })
         .select(
           `
@@ -723,7 +726,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       const user = await getCurrentUser();
       const { data, error } = await supabase
         .from("moneyzap_categories")
-        .insert({ ...category, user_id: user.id })
+        .insert({ ...category, user_id: user.id, entidade: state.entidadeAtiva })
         .select()
         .single();
 
