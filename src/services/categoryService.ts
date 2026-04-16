@@ -26,14 +26,20 @@ export const getCategories = async (): Promise<Category[]> => {
 };
 
 export const getCategoriesByType = async (
-  type: "income" | "expense"
+  type: "income" | "expense",
+  entidade?: number
 ): Promise<Category[]> => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("moneyzap_categories")
       .select("*")
-      .eq("type", type)
-      .order("name");
+      .eq("type", type);
+    
+    if (entidade) {
+      query = query.eq("entidade", entidade);
+    }
+    
+    const { data, error } = await query.order("name");
 
     if (error) throw error;
 
@@ -86,7 +92,8 @@ export const addCategory = async (
         color: category.color,
         icon: category.icon,
         is_default: category.isDefault || false,
-        user_id: userId, // Add user_id to the inserted data
+        user_id: userId,
+        entidade: (category as any).entidade ?? 1,
       })
       .select()
       .single();

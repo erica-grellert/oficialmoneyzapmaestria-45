@@ -38,6 +38,7 @@ interface AppState {
   customStartDate: Date | null;
   customEndDate: Date | null;
   filteredTransactions: Transaction[];
+  entidadeAtiva: 1 | 2;
 }
 
 type AppAction =
@@ -62,7 +63,8 @@ type AppAction =
       type: "SET_CUSTOM_DATE_RANGE";
       payload: { start: Date | null; end: Date | null };
     }
-  | { type: "SET_FILTERED_TRANSACTIONS"; payload: Transaction[] };
+  | { type: "SET_FILTERED_TRANSACTIONS"; payload: Transaction[] }
+  | { type: "SET_ENTIDADE_ATIVA"; payload: 1 | 2 };
 
 interface AppContextType {
   state: AppState;
@@ -83,6 +85,9 @@ interface AppContextType {
   setTimeRange: (range: string) => void;
   customStartDate: Date | null;
   customEndDate: Date | null;
+  // Entity
+  entidadeAtiva: 1 | 2;
+  setEntidadeAtiva: (entidade: 1 | 2) => void;
   // Data fetching methods
   getTransactions: () => Promise<Transaction[]>;
   getGoals: () => Promise<Goal[]>;
@@ -111,11 +116,19 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const getInitialEntidade = (): 1 | 2 => {
+  try {
+    const stored = localStorage.getItem("moneyzap_entidade");
+    if (stored === "2") return 2;
+  } catch {}
+  return 1;
+};
+
 const initialState: AppState = {
   transactions: [],
   categories: [],
   goals: [],
-  isLoading: true, // Start with loading true
+  isLoading: true,
   error: null,
   user: null,
   hideValues: false,
@@ -123,6 +136,7 @@ const initialState: AppState = {
   customStartDate: null,
   customEndDate: null,
   filteredTransactions: [],
+  entidadeAtiva: getInitialEntidade(),
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -152,6 +166,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     case "SET_FILTERED_TRANSACTIONS":
       return { ...state, filteredTransactions: action.payload };
+    case "SET_ENTIDADE_ATIVA":
+      try { localStorage.setItem("moneyzap_entidade", String(action.payload)); } catch {}
+      return { ...state, entidadeAtiva: action.payload };
     case "ADD_TRANSACTION":
       return {
         ...state,
@@ -245,12 +262,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       goal_id: dbTransaction.goal_id,
       user_id: dbTransaction.user_id,
       created_at: dbTransaction.created_at,
+      entidade: dbTransaction.entidade ?? 1,
     };
   };
 
   const transformCategory = (dbCategory: any): Category => ({
     ...dbCategory,
     type: dbCategory.type as "income" | "expense",
+    entidade: dbCategory.entidade ?? 1,
   });
 
   const transformGoal = (dbGoal: any): Goal => ({
@@ -334,17 +353,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     });
   };
 
-  // Update filtered transactions when transactions or time range changes
-  useEffect(() => {
-    const filtered = filterTransactionsByTimeRange(state.transactions);
-
-    dispatch({ type: "SET_FILTERED_TRANSACTIONS", payload: filtered });
-  }, [
-    state.transactions,
-    state.timeRange,
-    state.customStartDate,
-    state.customEndDate,
-  ]);
+  // Note: filtered transactions are now computed in the filteredByEntidade effect below
 
   // Setup auth state listener and initial session check
   useEffect(() => {
@@ -423,7 +432,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         throw new Error("Session expired or invalid");
       }
 
-      // Load all data in parallel
+      // Load all data in parallel (load ALL entidades, filter in UI)
       const [transactionsRes, categoriesRes, goalsRes] = await Promise.all([
         supabase
           .from("moneyzap_transactions")
@@ -494,6 +503,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     },
     []
   );
+
+  const setEntidadeAtiva = useCallback((entidade: 1 | 2) => {
+    dispatch({ type: "SET_ENTIDADE_ATIVA", payload: entidade });
+  }, []);
 
   // Data fetching methods (memoized to prevent unnecessary re-renders)
   const getTransactions = useCallback(async (): Promise<Transaction[]> => {
@@ -600,6 +613,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
           date: transaction.date,
           goal_id: transaction.goalId,
           user_id: user.id,
+          entidade: state.entidadeAtiva,
         })
         .select(
           `
@@ -702,7 +716,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       const user = await getCurrentUser();
       const { data, error } = await supabase
         .from("moneyzap_categories")
-        .insert({ ...category, user_id: user.id })
+        .insert({ ...category, user_id: user.id, entidade: state.entidadeAtiva })
         .select()
         .single();
 
@@ -833,6 +847,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  // Filter transactions and categories by entidadeAtiva
+  const filteredByEntidade = useMemo(() => {
+    const transactions = state.transactions.filter(
+      (t: any) => (t.entidade ?? 1) === state.entidadeAtiva
+    );
+    const categories = state.categories.filter(
+      (c: any) => (c.entidade ?? 1) === state.entidadeAtiva
+    );
+    return { transactions, categories };
+  }, [state.transactions, state.categories, state.entidadeAtiva]);
+
+  // Re-filter by time range when entidade changes
+  useEffect(() => {
+    const filtered = filterTransactionsByTimeRange(filteredByEntidade.transactions);
+    dispatch({ type: "SET_FILTERED_TRANSACTIONS", payload: filtered });
+  }, [filteredByEntidade.transactions, state.timeRange, state.customStartDate, state.customEndDate]);
+
+  // Reload data when entidade changes (to ensure fresh data)
+  useEffect(() => {
+    if (state.user?.id) {
+      loadUserData(state.user);
+    }
+  }, [state.entidadeAtiva]);
+
   const value: AppContextType = useMemo(
     () => ({
       state,
@@ -842,9 +880,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       toggleHideValues,
       logout,
       setCustomDateRange,
-      // Data access
-      transactions: state.transactions,
-      categories: state.categories,
+      // Data access - filtered by entidade
+      transactions: filteredByEntidade.transactions,
+      categories: filteredByEntidade.categories,
       goals: state.goals,
 
       filteredTransactions: state.filteredTransactions,
@@ -854,6 +892,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       setTimeRange,
       customStartDate: state.customStartDate,
       customEndDate: state.customEndDate,
+      // Entity
+      entidadeAtiva: state.entidadeAtiva,
+      setEntidadeAtiva,
       // Data fetching methods
       getTransactions,
       getGoals,
@@ -876,14 +917,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       state.transactions,
       state.categories,
       state.goals,
-
+      state.entidadeAtiva,
       state.hideValues,
       state.timeRange,
       state.customStartDate,
       state.customEndDate,
+      filteredByEntidade,
       toggleHideValues,
       logout,
       setCustomDateRange,
+      setEntidadeAtiva,
       setTimeRange,
     ]
   );
@@ -924,6 +967,8 @@ export const useSafeAppContext = () => {
       logout: async () => {},
       setCustomDateRange: () => {},
       setTimeRange: () => {},
+      entidadeAtiva: 1 as 1 | 2,
+      setEntidadeAtiva: () => {},
       getTransactions: async () => {},
       getGoals: async () => {},
       recalculateGoalAmounts: async () => {},

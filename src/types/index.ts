@@ -23,6 +23,7 @@ export interface Transaction {
   goal_id?: string;
   user_id?: string;
   created_at?: string;
+  entidade?: number;
 }
 
 export interface Goal {

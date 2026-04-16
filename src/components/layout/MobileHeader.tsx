@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import UserProfileDropdown from "./UserProfileDropdown";
 import { usePreferences } from "@/contexts/PreferencesContext";
+import EntityToggle from "@/components/common/EntityToggle";
 
 interface MobileHeaderProps {
   hideValues: boolean;
@@ -17,7 +18,9 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
   const { t } = usePreferences();
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-end gap-2 px-4 py-3 bg-background/95 backdrop-blur-sm border-b md:hidden">
+    <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between gap-2 px-4 py-3 bg-background/95 backdrop-blur-sm border-b md:hidden">
+      <EntityToggle />
+      <div className="flex items-center gap-2">
       <Button
         variant="ghost"
         size="icon"
@@ -33,6 +36,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
       </Button>
 
       <UserProfileDropdown />
+      </div>
     </div>
   );
 };
