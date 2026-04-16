@@ -1,6 +1,7 @@
 import React from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Bell, Gift, Mail, Calendar } from "lucide-react";
+import EntityToggle from "@/components/common/EntityToggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +62,7 @@ const TopBar = () => {
 
       {/* Ações */}
       <div className="flex items-center gap-2 sm:gap-3">
+        <EntityToggle />
         <Button
           variant="ghost"
           className="flex items-center text-sm text-primary-foreground rounded-md border-amber-300 border"
