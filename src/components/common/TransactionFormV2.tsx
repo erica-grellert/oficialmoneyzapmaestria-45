@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Transaction } from "@/types";
 import { useAdaptiveContext } from "@/hooks/useAdaptiveContext";
+import { useAppContext } from "@/contexts/AppContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import {
   createTransactionSchema,
@@ -53,6 +54,7 @@ export const TransactionFormV2: React.FC<TransactionFormV2Props> = ({
 }) => {
   const { t } = usePreferences();
   const { addTransaction, updateTransaction } = useAdaptiveContext();
+  const { entidadeAtiva } = useAppContext();
   const { toast } = useToast();
   const [selectedType, setSelectedType] = useState<"income" | "expense">(
     initialData?.type || defaultType
@@ -85,7 +87,7 @@ export const TransactionFormV2: React.FC<TransactionFormV2Props> = ({
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const categoryData = await getCategoriesByType(selectedType);
+        const categoryData = await getCategoriesByType(selectedType, entidadeAtiva);
         setCategories(categoryData);
 
         // Set default category if none selected and this is a new transaction
@@ -103,7 +105,7 @@ export const TransactionFormV2: React.FC<TransactionFormV2Props> = ({
     };
 
     loadCategories();
-  }, [selectedType, form, initialData]);
+  }, [selectedType, form, initialData, entidadeAtiva]);
 
   // Reset form when opening/closing
   useEffect(() => {
