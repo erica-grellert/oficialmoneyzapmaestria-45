@@ -977,6 +977,8 @@ export const useSafeAppContext = () => {
       logout: async () => {},
       setCustomDateRange: () => {},
       setTimeRange: () => {},
+      entidadeAtiva: 1 as 1 | 2,
+      setEntidadeAtiva: () => {},
       getTransactions: async () => {},
       getGoals: async () => {},
       recalculateGoalAmounts: async () => {},
