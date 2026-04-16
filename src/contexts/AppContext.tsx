@@ -38,6 +38,7 @@ interface AppState {
   customStartDate: Date | null;
   customEndDate: Date | null;
   filteredTransactions: Transaction[];
+  entidadeAtiva: 1 | 2;
 }
 
 type AppAction =
@@ -62,7 +63,8 @@ type AppAction =
       type: "SET_CUSTOM_DATE_RANGE";
       payload: { start: Date | null; end: Date | null };
     }
-  | { type: "SET_FILTERED_TRANSACTIONS"; payload: Transaction[] };
+  | { type: "SET_FILTERED_TRANSACTIONS"; payload: Transaction[] }
+  | { type: "SET_ENTIDADE_ATIVA"; payload: 1 | 2 };
 
 interface AppContextType {
   state: AppState;
@@ -83,6 +85,9 @@ interface AppContextType {
   setTimeRange: (range: string) => void;
   customStartDate: Date | null;
   customEndDate: Date | null;
+  // Entity
+  entidadeAtiva: 1 | 2;
+  setEntidadeAtiva: (entidade: 1 | 2) => void;
   // Data fetching methods
   getTransactions: () => Promise<Transaction[]>;
   getGoals: () => Promise<Goal[]>;
@@ -111,11 +116,19 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const getInitialEntidade = (): 1 | 2 => {
+  try {
+    const stored = localStorage.getItem("moneyzap_entidade");
+    if (stored === "2") return 2;
+  } catch {}
+  return 1;
+};
+
 const initialState: AppState = {
   transactions: [],
   categories: [],
   goals: [],
-  isLoading: true, // Start with loading true
+  isLoading: true,
   error: null,
   user: null,
   hideValues: false,
@@ -123,6 +136,7 @@ const initialState: AppState = {
   customStartDate: null,
   customEndDate: null,
   filteredTransactions: [],
+  entidadeAtiva: getInitialEntidade(),
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -152,6 +166,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     case "SET_FILTERED_TRANSACTIONS":
       return { ...state, filteredTransactions: action.payload };
+    case "SET_ENTIDADE_ATIVA":
+      try { localStorage.setItem("moneyzap_entidade", String(action.payload)); } catch {}
+      return { ...state, entidadeAtiva: action.payload };
     case "ADD_TRANSACTION":
       return {
         ...state,
