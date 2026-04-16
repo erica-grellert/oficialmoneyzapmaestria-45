@@ -353,17 +353,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     });
   };
 
-  // Update filtered transactions when transactions or time range changes
-  useEffect(() => {
-    const filtered = filterTransactionsByTimeRange(state.transactions);
-
-    dispatch({ type: "SET_FILTERED_TRANSACTIONS", payload: filtered });
-  }, [
-    state.transactions,
-    state.timeRange,
-    state.customStartDate,
-    state.customEndDate,
-  ]);
+  // Note: filtered transactions are now computed in the filteredByEntidade effect below
 
   // Setup auth state listener and initial session check
   useEffect(() => {
