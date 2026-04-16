@@ -139,7 +139,7 @@ const CategoriesPage: React.FC = () => {
       try {
         const success = await deleteCategory(categoryToDelete.id);
         if (success) {
-          const updatedCategories = await getCategoriesByType(categoryType);
+          const updatedCategories = await getCategoriesByType(categoryType, entidadeAtiva);
           setCategories(updatedCategories);
 
           // Refresh category totals
