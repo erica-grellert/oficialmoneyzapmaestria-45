@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useAppContext } from "@/contexts/AppContext";
 import AppLayout from "@/components/layout/AppLayout";
 import SubscriptionGuard from "@/components/subscription/SubscriptionGuard";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ import {
 const CategoriesPage: React.FC = () => {
   const { t } = usePreferences();
   const { toast } = useToast();
+  const { entidadeAtiva } = useAppContext();
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryFormOpen, setCategoryFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -87,7 +89,7 @@ const CategoriesPage: React.FC = () => {
     const loadCategories = async () => {
       setLoading(true);
       try {
-        const loadedCategories = await getCategoriesByType(categoryType);
+        const loadedCategories = await getCategoriesByType(categoryType, entidadeAtiva);
         setCategories(loadedCategories);
 
         // Load monthly totals for categories
@@ -105,7 +107,7 @@ const CategoriesPage: React.FC = () => {
     };
 
     loadCategories();
-  }, [categoryType, toast, t, refreshCategoryTotals]);
+  }, [categoryType, toast, t, refreshCategoryTotals, entidadeAtiva]);
 
   const handleAddCategory = () => {
     setEditingCategory(null);
@@ -198,7 +200,7 @@ const CategoriesPage: React.FC = () => {
       }
 
       // Refresh categories list
-      const updatedCategories = await getCategoriesByType(categoryType);
+      const updatedCategories = await getCategoriesByType(categoryType, entidadeAtiva);
       setCategories(updatedCategories);
 
       // Refresh category totals
