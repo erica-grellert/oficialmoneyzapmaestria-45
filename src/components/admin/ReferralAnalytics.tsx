@@ -123,7 +123,15 @@ const ReferralAnalytics: React.FC = () => {
         active_referrers: activeReferrers || 0,
         total_bonus_days_given: totalBonusDays,
         conversion_rate: conversionRate,
-        top_referrers: topReferrers || [],
+        top_referrers: (topReferrers || []).map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          email: r.email,
+          referral_code: r.referral_code,
+          total_referrals: r.total_referrals,
+          recent_referrals: r.recent_referrals,
+          bonus_days: r.referral_bonus_days || 0,
+        })),
         recent_referrals:
           recentReferrals?.map((ref) => ({
             id: ref.id,

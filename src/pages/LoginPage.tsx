@@ -340,7 +340,7 @@ const LoginPage = () => {
               country_code: selectedCountry.code,
               referral_code: referralCode || null, // Include referral code if provided
             },
-            signal: abortController.signal,
+            
           });
 
         if (signUpError) {
