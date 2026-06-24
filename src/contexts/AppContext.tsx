@@ -269,7 +269,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   const transformCategory = (dbCategory: any): Category => ({
     ...dbCategory,
     type: dbCategory.type as "income" | "expense",
-    entidade: dbCategory.entidade ?? 1,
+    entidades: Array.isArray(dbCategory.entidades) ? dbCategory.entidades : [1],
   });
 
   const transformGoal = (dbGoal: any): Goal => ({
