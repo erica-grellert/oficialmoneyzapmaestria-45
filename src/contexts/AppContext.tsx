@@ -852,9 +852,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     const transactions = state.transactions.filter(
       (t: any) => (t.entidade ?? 1) === state.entidadeAtiva
     );
-    const categories = state.categories.filter(
-      (c: any) => (c.entidade ?? 1) === state.entidadeAtiva
-    );
+    const categories = state.categories.filter((c: any) => {
+      const ents = Array.isArray(c.entidades) ? c.entidades : [1];
+      return ents.includes(state.entidadeAtiva);
+    });
     return { transactions, categories };
   }, [state.transactions, state.categories, state.entidadeAtiva]);
 
