@@ -105,7 +105,7 @@ export const TransactionFormV2: React.FC<TransactionFormV2Props> = ({
     };
 
     loadCategories();
-  }, [selectedType, form, initialData, entidadeAtiva]);
+  }, [selectedType, form, initialData, entidadeAtiva, contextCategories]);
 
   // Reset form when opening/closing
   useEffect(() => {
