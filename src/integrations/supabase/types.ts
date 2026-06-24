@@ -18,7 +18,7 @@ export type Database = {
         Row: {
           color: string
           created_at: string | null
-          entidade: number
+          entidades: number[]
           icon: string | null
           id: string
           is_default: boolean | null
@@ -29,7 +29,7 @@ export type Database = {
         Insert: {
           color?: string
           created_at?: string | null
-          entidade?: number
+          entidades?: number[]
           icon?: string | null
           id?: string
           is_default?: boolean | null
@@ -40,7 +40,7 @@ export type Database = {
         Update: {
           color?: string
           created_at?: string | null
-          entidade?: number
+          entidades?: number[]
           icon?: string | null
           id?: string
           is_default?: boolean | null
