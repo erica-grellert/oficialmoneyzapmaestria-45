@@ -716,7 +716,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       const user = await getCurrentUser();
       const { data, error } = await supabase
         .from("moneyzap_categories")
-        .insert({ ...category, user_id: user.id, entidade: state.entidadeAtiva })
+        .insert({ ...category, user_id: user.id, entidades: (category as any).entidades ?? [state.entidadeAtiva] })
         .select()
         .single();
 
