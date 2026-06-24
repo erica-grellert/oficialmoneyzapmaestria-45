@@ -54,7 +54,7 @@ import {
 const CategoriesPage: React.FC = () => {
   const { t } = usePreferences();
   const { toast } = useToast();
-  const { entidadeAtiva } = useAppContext();
+  const { entidadeAtiva, addCategory: addCategoryCtx } = useAppContext();
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryFormOpen, setCategoryFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
