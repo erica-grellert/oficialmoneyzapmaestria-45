@@ -8,4 +8,5 @@ export interface Category {
   color: string;
   icon: string;
   isDefault?: boolean;
+  entidades?: number[];
 }

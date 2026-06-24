@@ -18,6 +18,7 @@ export const getCategories = async (): Promise<Category[]> => {
       color: item.color,
       type: item.type as "income" | "expense",
       isDefault: item.is_default,
+      entidades: item.entidades,
     }));
   } catch (error) {
     console.error("Error fetching categories:", error);
@@ -36,7 +37,7 @@ export const getCategoriesByType = async (
       .eq("type", type);
     
     if (entidade) {
-      query = query.eq("entidade", entidade);
+      query = query.contains("entidades", [entidade]);
     }
     
     const { data, error } = await query.order("name");
@@ -50,6 +51,7 @@ export const getCategoriesByType = async (
       color: item.color,
       type: item.type as "income" | "expense",
       isDefault: item.is_default,
+      entidades: item.entidades,
     }));
 
     // Sort categories so "Outros" appears at the end
@@ -93,7 +95,7 @@ export const addCategory = async (
         icon: category.icon,
         is_default: category.isDefault || false,
         user_id: userId,
-        entidade: (category as any).entidade ?? 1,
+        entidades: category.entidades ?? [1],
       })
       .select()
       .single();
@@ -111,6 +113,7 @@ export const addCategory = async (
       color: data.color,
       icon: data.icon || "circle",
       isDefault: data.is_default,
+      entidades: data.entidades,
     };
   } catch (error) {
     console.error("Error adding category:", error);
@@ -143,6 +146,7 @@ export const updateCategory = async (
       color: data.color,
       icon: data.icon || "circle",
       isDefault: data.is_default,
+      entidades: data.entidades,
     };
   } catch (error) {
     console.error("Error updating category:", error);
@@ -212,6 +216,7 @@ export const getDefaultCategories = async (): Promise<Category[]> => {
       color: item.color,
       type: item.type as "income" | "expense",
       isDefault: item.is_default,
+      entidades: item.entidades,
     }));
   } catch (error) {
     console.error("Error fetching default categories:", error);

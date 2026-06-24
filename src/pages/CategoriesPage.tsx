@@ -190,6 +190,7 @@ const CategoriesPage: React.FC = () => {
         const newCategory = await addCategory({
           ...category,
           type: categoryType, // Make sure to use the current categoryType
+          entidades: [entidadeAtiva],
         });
         if (newCategory) {
           toast({
