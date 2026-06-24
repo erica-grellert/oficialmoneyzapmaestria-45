@@ -54,7 +54,7 @@ export const TransactionFormV2: React.FC<TransactionFormV2Props> = ({
 }) => {
   const { t } = usePreferences();
   const { addTransaction, updateTransaction } = useAdaptiveContext();
-  const { entidadeAtiva } = useAppContext();
+  const { entidadeAtiva, categories: contextCategories } = useAppContext();
   const { toast } = useToast();
   const [selectedType, setSelectedType] = useState<"income" | "expense">(
     initialData?.type || defaultType
