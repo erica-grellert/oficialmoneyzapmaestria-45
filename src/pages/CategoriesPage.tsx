@@ -54,7 +54,7 @@ import {
 const CategoriesPage: React.FC = () => {
   const { t } = usePreferences();
   const { toast } = useToast();
-  const { entidadeAtiva } = useAppContext();
+  const { entidadeAtiva, addCategory: addCategoryCtx } = useAppContext();
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryFormOpen, setCategoryFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -186,18 +186,16 @@ const CategoriesPage: React.FC = () => {
           });
         }
       } else {
-        // Add new category - ensure type is set correctly
-        const newCategory = await addCategory({
+        // Add new category via context so all consumers refresh
+        await addCategoryCtx({
           ...category,
-          type: categoryType, // Make sure to use the current categoryType
+          type: categoryType,
           entidades: [entidadeAtiva],
+        } as any);
+        toast({
+          title: "Categoria adicionada",
+          description: `A categoria ${category.name} foi adicionada com sucesso.`,
         });
-        if (newCategory) {
-          toast({
-            title: "Categoria adicionada",
-            description: `A categoria ${category.name} foi adicionada com sucesso.`,
-          });
-        }
       }
 
       // Refresh categories list
