@@ -3,9 +3,33 @@ import { MatchReason, RawStatementEntry } from "@/types/statements";
 
 const db = supabase as any;
 
-const AMOUNT_TOLERANCE = 5.0;
-const PCT_TOLERANCE = 0.03;
 const DAY_TOLERANCE = 3;
+const MAX_TOLERANCE = 5.0;
+const MIN_TOLERANCE = 1.0;
+const TOLERANCE_RATE = 0.05;
+
+const OPERATIONAL_PREFIXES = new Set([
+  "PIX",
+  "TRANSF",
+  "TRANSFERENCIA",
+  "TRANSFERÊNCIA",
+  "TED",
+  "DOC",
+  "TBI",
+  "PAY",
+  "PAGAMENTO",
+  "PAGTO",
+  "PGTO",
+  "COMPRA",
+  "CARTAO",
+  "CARTÃO",
+  "DEBITO",
+  "DÉBITO",
+  "CREDITO",
+  "CRÉDITO",
+  "ENVIADO",
+  "RECEBIDO",
+]);
 
 export interface CandidateTransaction {
   id: string;
@@ -30,6 +54,35 @@ const diffDays = (a: string, b: string): number =>
         86400000
     )
   );
+
+const stripAccents = (value: string): string =>
+  value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+const proportionalTolerance = (amount: number): number => {
+  const base = Math.max(amount, 0.01);
+  return Math.min(MAX_TOLERANCE, Math.max(TOLERANCE_RATE * base, MIN_TOLERANCE));
+};
+
+const significantWords = (description: string): Set<string> => {
+  const normalized = stripAccents(description)
+    .toUpperCase()
+    .replace(/[^A-Z\s]/g, " ");
+  return new Set(
+    normalized
+      .split(/\s+/)
+      .filter((w) => w.length >= 4 && !OPERATIONAL_PREFIXES.has(w))
+  );
+};
+
+const hasSignificantCommonWord = (a: string, b: string): boolean => {
+  const wordsA = significantWords(a);
+  const wordsB = significantWords(b);
+  if (wordsA.size === 0 || wordsB.size === 0) return false;
+  for (const word of wordsA) {
+    if (wordsB.has(word)) return true;
+  }
+  return false;
+};
 
 const similarity = (a: string, b: string): number => {
   const wordsA = new Set(a.toUpperCase().split(/\s+/).filter(Boolean));
@@ -100,14 +153,22 @@ export const findMatch = (
 
     const candidateAmount = Number(candidate.amount);
     const diffValor = Math.abs(candidateAmount - entry.amount);
-    const diffPct = diffValor / Math.max(candidateAmount, 0.01);
+    const referenceAmount = Math.max(candidateAmount, entry.amount);
+    const tolerance = proportionalTolerance(referenceAmount);
 
-    if (diffValor > AMOUNT_TOLERANCE && diffPct > PCT_TOLERANCE) return;
+    if (diffValor > tolerance) return;
 
+    const candidateDescription = candidate.description ?? "";
+    const exactMatch = diffValor === 0;
+    if (!exactMatch && !hasSignificantCommonWord(candidateDescription, entry.description)) {
+      return;
+    }
+
+    const diffPct = diffValor / Math.max(referenceAmount, 0.01);
     const score =
-      0.6 * (1 - Math.min(diffValor / AMOUNT_TOLERANCE, 1)) +
+      0.6 * (1 - Math.min(diffValor / tolerance, 1)) +
       0.3 * (1 - days / DAY_TOLERANCE) +
-      0.1 * similarity(candidate.description ?? "", entry.description);
+      0.1 * similarity(candidateDescription, entry.description);
 
     if (!best || score > best.score) {
       best = {
@@ -121,7 +182,7 @@ export const findMatch = (
             id: candidate.id,
             date: candidate.date,
             amount: candidateAmount,
-            description: candidate.description ?? "",
+            description: candidateDescription,
             hasGoal: Boolean(candidate.goal_id),
           },
         },
