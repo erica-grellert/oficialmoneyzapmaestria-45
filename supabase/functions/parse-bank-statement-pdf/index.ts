@@ -1,6 +1,6 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const MAX_PAGES = 30;
 const BATCH_SIZE = 4;
 const BATCH_THRESHOLD = 6;
@@ -13,45 +13,37 @@ Regras absolutas:
 - NÃO altere nenhum valor, data ou descrição. Copie exatamente o que está no documento.
 - amount é SEMPRE positivo. A natureza vai em direction: "expense" para débito/saída/pagamento/compra, "income" para crédito/entrada/depósito/recebimento.
 - date sempre no formato ISO YYYY-MM-DD. Se o extrato usar DD/MM ou DD/MM/AAAA, converta sem inventar o ano: use o ano presente no documento.
-- Se o documento informar saldo inicial (saldo anterior) e/ou saldo final, devolva-os nos campos opening_balance e closing_balance. Se não existirem no texto, omita-os. Nunca calcule esses saldos.`;
+- Se o documento informar saldo inicial (saldo anterior) e/ou saldo final, devolva-os nos campos opening_balance e closing_balance. Se não existirem no texto, devolva null. Nunca calcule esses saldos.
+Responda somente com JSON no schema pedido.`;
 
-const TOOL = {
-  type: "function",
-  function: {
-    name: "return_statement",
-    description:
-      "Devolve os lançamentos extraídos do extrato e, quando existirem no documento, os saldos inicial e final.",
-    parameters: {
-      type: "object",
-      properties: {
-        transactions: {
-          type: "array",
-          description: "Lançamentos encontrados, na ordem em que aparecem.",
-          items: {
-            type: "object",
-            properties: {
-              date: { type: "string", description: "Data ISO YYYY-MM-DD" },
-              description: { type: "string", description: "Descrição literal do lançamento" },
-              amount: { type: "number", description: "Valor sempre positivo" },
-              direction: { type: "string", enum: ["income", "expense"] },
-            },
-            required: ["date", "description", "amount", "direction"],
-            additionalProperties: false,
-          },
+const RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    transactions: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          date: { type: "STRING", description: "Data ISO YYYY-MM-DD" },
+          description: { type: "STRING", description: "Descrição literal do lançamento" },
+          amount: { type: "NUMBER", description: "Valor sempre positivo" },
+          direction: { type: "STRING", enum: ["income", "expense"] },
         },
-        opening_balance: {
-          type: ["number", "null"],
-          description: "Saldo inicial/anterior, se explícito no documento",
-        },
-        closing_balance: {
-          type: ["number", "null"],
-          description: "Saldo final, se explícito no documento",
-        },
+        required: ["date", "description", "amount", "direction"],
       },
-      required: ["transactions"],
-      additionalProperties: false,
+    },
+    opening_balance: {
+      type: "NUMBER",
+      nullable: true,
+      description: "Saldo inicial/anterior, se explícito no documento",
+    },
+    closing_balance: {
+      type: "NUMBER",
+      nullable: true,
+      description: "Saldo final, se explícito no documento",
     },
   },
+  required: ["transactions"],
 };
 
 interface ParsedTx {
@@ -72,51 +64,59 @@ async function callModel(pagesText: string[], offset: number): Promise<BatchResu
     .map((t, i) => `--- PÁGINA ${offset + i + 1} ---\n${t}`)
     .join("\n\n");
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+  const res = await fetch(url, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userContent },
-      ],
-      tools: [TOOL],
-      tool_choice: { type: "function", function: { name: "return_statement" } },
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: [{ role: "user", parts: [{ text: userContent }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: RESPONSE_SCHEMA,
+        temperature: 0,
+      },
     }),
   });
 
-  if (res.status === 429) {
-    const e = new Error("rate_limit");
-    // @ts-ignore custom
-    e.status = 429;
-    throw e;
-  }
-  if (res.status === 402) {
-    const e = new Error("payment_required");
-    // @ts-ignore custom
-    e.status = 402;
-    throw e;
-  }
+  const rawBody = await res.text();
+
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`AI gateway error ${res.status}: ${body.slice(0, 300)}`);
+    let detail = rawBody.slice(0, 800);
+    try {
+      const parsed = JSON.parse(rawBody);
+      detail = parsed?.error?.message ?? detail;
+    } catch { /* mantém texto bruto */ }
+    const e = new Error(`Gemini ${res.status}: ${detail}`);
+    // @ts-ignore custom
+    e.status = res.status;
+    throw e;
   }
 
-  const json = await res.json();
-  const call = json?.choices?.[0]?.message?.tool_calls?.[0];
-  if (!call?.function?.arguments) {
-    return { transactions: [], opening_balance: null, closing_balance: null };
+  let json: any;
+  try {
+    json = JSON.parse(rawBody);
+  } catch {
+    throw new Error(`Resposta inválida da Gemini: ${rawBody.slice(0, 500)}`);
+  }
+
+  const text = json?.candidates?.[0]?.content?.parts
+    ?.map((p: any) => p?.text ?? "")
+    .join("") ?? "";
+
+  if (!text.trim()) {
+    const reason = json?.candidates?.[0]?.finishReason ??
+      json?.promptFeedback?.blockReason ?? "sem conteúdo";
+    throw new Error(`Gemini não retornou conteúdo (${reason}).`);
   }
 
   let args: any;
   try {
-    args = JSON.parse(call.function.arguments);
+    args = JSON.parse(text);
   } catch {
-    return { transactions: [], opening_balance: null, closing_balance: null };
+    throw new Error(`JSON inválido retornado pela Gemini: ${text.slice(0, 500)}`);
   }
 
   const transactions: ParsedTx[] = Array.isArray(args.transactions)
@@ -155,9 +155,13 @@ Deno.serve(async (req) => {
   const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
 
   try {
-    if (!LOVABLE_API_KEY) {
+    if (!GEMINI_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY não configurada no projeto." }),
+        JSON.stringify({
+          error:
+            "GEMINI_API_KEY não está definida nas secrets do projeto Supabase. Cadastre a secret e tente novamente.",
+          code: "missing_api_key",
+        }),
         { status: 500, headers: jsonHeaders }
       );
     }
@@ -252,30 +256,15 @@ Deno.serve(async (req) => {
       { status: 200, headers: jsonHeaders }
     );
   } catch (error: any) {
-    if (error?.status === 429) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Limite de uso da IA atingido. Aguarde alguns instantes e tente novamente, ou importe o extrato em CSV/OFX.",
-          code: "rate_limit",
-        }),
-        { status: 429, headers: jsonHeaders }
-      );
-    }
-    if (error?.status === 402) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Os créditos de IA do workspace acabaram. Adicione créditos em Settings → Workspace → Usage para importar PDFs.",
-          code: "payment_required",
-        }),
-        { status: 402, headers: jsonHeaders }
-      );
-    }
     console.error("parse-bank-statement-pdf error:", error);
+    const status = typeof error?.status === "number" ? error.status : 500;
     return new Response(
-      JSON.stringify({ error: error?.message ?? "Falha ao processar o PDF." }),
-      { status: 500, headers: jsonHeaders }
+      JSON.stringify({
+        error: error?.message ?? "Falha ao processar o PDF.",
+        code: status === 429 ? "rate_limit" : "gemini_error",
+        status,
+      }),
+      { status, headers: jsonHeaders }
     );
   }
 });
