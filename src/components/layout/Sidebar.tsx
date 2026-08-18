@@ -15,6 +15,8 @@ import {
   User,
   Settings,
   FolderOpen,
+  FileSpreadsheet,
+
   Calendar,
   Crown,
   LogOut,
