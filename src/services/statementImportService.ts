@@ -143,11 +143,17 @@ interface PreparedLine {
  * - occurrence é sempre a próxima posição livre sobre TODAS as linhas
  *   existentes daquele (user_id, line_hash), inclusive as ignoradas.
  */
+interface HashStat {
+  total: number;
+  effective: number;
+  rows: number;
+}
+
 const loadHashStats = async (
   userId: string,
   hashes: string[]
-): Promise<Map<string, { total: number; effective: number }>> => {
-  const stats = new Map<string, { total: number; effective: number }>();
+): Promise<Map<string, HashStat>> => {
+  const stats = new Map<string, HashStat>();
   const unique = Array.from(new Set(hashes));
   if (unique.length === 0) return stats;
 
@@ -166,11 +172,11 @@ const loadHashStats = async (
     }
 
     (data ?? []).forEach((row: any) => {
-      const current = stats.get(row.line_hash) ?? { total: 0, effective: 0 };
+      const current = stats.get(row.line_hash) ?? { total: 0, effective: 0, rows: 0 };
       // total = próxima posição livre: cobre todas as linhas existentes,
       // inclusive as ignoradas, para nunca colidir com o índice único.
       current.total = Math.max(current.total + 0, Number(row.occurrence) || 0);
-      current.rows = (current.rows ?? 0) + 1;
+      current.rows += 1;
       if (row.created_transaction_id || row.match_status === "reconciled") {
         current.effective += 1;
       }
@@ -178,7 +184,7 @@ const loadHashStats = async (
     });
 
     stats.forEach((value) => {
-      value.total = Math.max(value.total, value.rows ?? 0);
+      value.total = Math.max(value.total, value.rows);
     });
 
   }
@@ -280,7 +286,7 @@ export const createImportWithLines = async (
   const prepared: PreparedLine[] = [];
 
   enriched.forEach(({ entry, merchantKey, lineHash }, index) => {
-    const stats = hashStats.get(lineHash) ?? { total: 0, effective: 0 };
+    const stats = hashStats.get(lineHash) ?? { total: 0, effective: 0, rows: 0 };
 
     const indexInFile = (seenInFile.get(lineHash) ?? 0) + 1;
     seenInFile.set(lineHash, indexInFile);
