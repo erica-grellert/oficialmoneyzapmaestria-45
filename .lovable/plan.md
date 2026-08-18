@@ -1,263 +1,148 @@
-# Importação de Extrato Bancário com Conferência e Conciliação (Fase 1)
+# Importador de Extrato Bancário — Fase 1 (PDF, CSV, XLSX, OFX)
 
-## Resposta direta: nome real da coluna de entidade
+## Coluna de entidade (confirmado no banco)
 
-Em `moneyzap_transactions` a coluna é **`entidade`** — singular, tipo `smallint` (`int2`), `NOT NULL`, default `1` (1 = Pessoal, 2 = Empresarial).
+- `moneyzap_transactions.entidade` — **singular**, `smallint`, NOT NULL, default `1` (1 = Pessoal, 2 = Empresarial)
+- `moneyzap_categories.entidades` — **plural**, `smallint[]`, NOT NULL, default `{1}`
 
-Atenção à assimetria confirmada no banco: em `moneyzap_categories` a coluna é **`entidades`** — plural, tipo `smallint[]` (`_int2`), `NOT NULL`, default `'{1}'`. Não são a mesma coisa e o código já trata as duas de formas diferentes (`.eq('entidade', n)` para transações, `.contains('entidades', [n])` para categorias).
+Filtros: `.eq('entidade', n)` para transações, `.contains('entidades', [n])` para categorias.
 
-## Schema atual relevante (literal, lido do banco agora)
+## Regras de negócio
+
+- Nada entra em `moneyzap_transactions` fora do clique de confirmação final na tela de conferência. Todo arquivo (inclusive o resultado da IA no PDF) cai no staging.
+- Conciliação: mesmo usuário, mesma direção, valor igual ou com diferença de até R$ 5,00 **ou** 3%, data em ±3 dias → linha marcada como possível duplicata, desmarcada, com escolha manual entre conciliar ou importar como nova.
+- Ao conciliar: mantém o registro original, grava `original_amount` e `original_description`, atualiza valor/data/descrição com o dado do banco e marca `reconciled_at`. Se `reconciled_at` já estiver preenchido, não sobrescreve de novo.
+- Candidatos de conciliação filtram `reconciled_at IS NULL` e `user_id IS NOT NULL`.
+- Transação com `goal_id` preenchido não pode ser conciliada nesta fase: some a ação "Conciliar" e aparece o aviso "lançamento vinculado a uma meta, importe como novo ou ajuste manualmente". `update_goal_amount` não é chamada neste fluxo.
+- Entidade padrão do lote vem do toggle Pessoal/Empresarial na tela de upload, editável linha a linha.
+- Reuso obrigatório: bucket `uploads`, tabela `moneyzap_uploads`, funções `register_upload`, `generate_upload_path`, `validate_file_type`. Nada disso é recriado.
+
+## Migração (SQL a aprovar)
+
+### `moneyzap_statement_imports`
+`id uuid PK`, `user_id uuid NOT NULL`, `upload_id uuid → moneyzap_uploads(id) ON DELETE SET NULL`, `file_name text`, `file_hash text`, `file_format text CHECK IN ('csv','xlsx','ofx','pdf')`, `entidade_default smallint default 1`, `status text default 'pending' CHECK IN ('pending','reviewing','completed','discarded')`, `period_start/period_end date`, `total_rows/imported_rows/skipped_rows/reconciled_rows integer default 0`, `opening_balance numeric`, `closing_balance numeric`, `balance_check_diff numeric`, `created_at/updated_at`.
+
+Índices: `UNIQUE (user_id, file_hash)` (mesmo arquivo reenviado abre o import existente), `(user_id, created_at DESC)`.
+
+### `moneyzap_statement_lines` (staging)
+`id`, `import_id → statement_imports ON DELETE CASCADE`, `user_id`, `row_index`, `raw_line jsonb`, `line_hash text`, **`occurrence integer NOT NULL DEFAULT 1`**, `fitid text NULL`, `posted_at date`, `description_raw text`, `merchant_key text`, **`amount numeric NOT NULL CHECK (amount > 0)`**, `direction text CHECK IN ('income','expense')`, `entidade smallint default 1`, `suggested_category_id uuid → categories`, `category_id uuid → categories`, `match_status text default 'new' CHECK IN ('new','possible_duplicate','reconciled','imported','ignored')`, `match_transaction_id uuid → transactions`, `match_score numeric`, `match_reason jsonb`, `selected boolean default false`, `created_transaction_id uuid → transactions`, `created_at/updated_at`.
+
+Índices (dedup corrigida):
+- **`UNIQUE (user_id, line_hash, occurrence)`** — permite dois cafés de R$ 12 no mesmo dia na mesma padaria sem estourar constraint
+- `UNIQUE (user_id, fitid) WHERE fitid IS NOT NULL` — inalterado
+- `(import_id, match_status)`, `(user_id, posted_at)`
+
+`line_hash` = SHA-256 de `posted_at + amount + direction + merchant_key`.
+
+### `moneyzap_merchant_rules`
+`id`, `user_id`, `merchant_key text`, `category_id uuid → categories ON DELETE CASCADE`, `entidade smallint`, `direction text`, `hit_count integer default 1`, `last_used_at`, `created_at/updated_at`.
+Índices: `UNIQUE (user_id, merchant_key, entidade, direction)`, `(user_id, merchant_key)`.
+
+### `moneyzap_transactions` (colunas novas, todas nullable)
+`reconciled_at timestamptz`, `statement_line_id uuid`, `import_id uuid`, `original_amount numeric`, `original_description text`.
+Índice: `(user_id, date, type)` para acelerar a busca de candidatos.
+
+### RLS
+Nas três tabelas novas: `GRANT` para `authenticated` e `service_role` (nunca `anon`), RLS ligada e políticas de SELECT/INSERT/UPDATE/DELETE com `auth.uid() = user_id`. Em `statement_lines` o INSERT também valida que o `import_id` pertence ao usuário.
+
+## Deduplicação por ocorrência
 
 ```text
-moneyzap_transactions
-  id           uuid        NOT NULL  default gen_random_uuid()
-  user_id      uuid        NULL
-  type         text        NOT NULL              -- 'income' | 'expense'
-  amount       numeric     NOT NULL
-  category_id  uuid        NULL      -> moneyzap_categories.id
-  description  text        NULL
-  date         date        NOT NULL
-  goal_id      uuid        NULL      -> moneyzap_goals.id
-  created_at   timestamptz NULL      default now()
-  updated_at   timestamptz NULL      default now()
-  entidade     smallint    NOT NULL  default 1
+ocorrencias_no_arquivo = contagem de linhas com o mesmo line_hash no arquivo atual
+ja_existentes = SELECT count(*) FROM statement_lines WHERE user_id = me AND line_hash = h
 
-moneyzap_categories
-  id          uuid        NOT NULL default gen_random_uuid()
-  user_id     uuid        NULL
-  name        text        NOT NULL
-  type        text        NOT NULL
-  color       text        NOT NULL default '#9E9E9E'
-  icon        text        NULL     default 'circle'
-  is_default  boolean     NULL     default false
-  created_at  timestamptz NULL     default now()
-  entidades   smallint[]  NOT NULL default '{1}'
+para a i-ésima ocorrência (i começando em 1) do hash h no arquivo:
+    occurrence = ja_existentes + i
+    se ja_existentes >= ocorrencias_no_arquivo:
+        match_status = 'ignored'
+        selected = false
+        match_reason = { motivo: "já importada anteriormente" }
 
-moneyzap_uploads
-  id          uuid        NOT NULL default gen_random_uuid()
-  user_id     uuid        NULL     -> moneyzap_users.id
-  file_name   text        NOT NULL
-  file_path   text        NOT NULL
-  file_size   integer     NULL
-  mime_type   text        NULL
-  purpose     text        NULL
-  created_at  timestamptz NULL     default now()
+fitid já existente para o usuário  ->  'ignored', mesmo motivo
 ```
 
-Funções que serão reaproveitadas sem alteração: `register_upload(...)`, `generate_upload_path(user_id, ext)`, `validate_file_type(file_name, allowed[])`. Bucket `uploads` (público) já existe — não será recriado. RLS de `moneyzap_uploads` já cobre "Users can manage own uploads".
+## Fluxo por formato
 
-Também confirmado: `src/integrations/supabase/types.ts` já reflete `entidade: number` em transactions e `entidades: number[]` em categories. Nenhuma edge function de importação existe hoje (as 24 atuais são Stripe, admin, settings, referral).
+- **PDF (com IA, único ponto de IA)**: `pdfjs-dist` no cliente extrai o texto de cada página na ordem de leitura → envia para a edge function `parse-bank-statement-pdf` → Lovable AI (`https://ai.gateway.lovable.dev/v1/chat/completions`, `Authorization: Bearer ${LOVABLE_API_KEY}`, modelo `google/gemini-2.5-flash`) com **tool calling** e JSON schema estrito devolvendo `date` (ISO), `description`, `amount` (positivo) e `direction`. Instrução explícita: extrair só linhas de lançamento, ignorar cabeçalho, rodapé, saldo, subtotal e texto institucional, não inventar linha, não alterar valor. Mais de 6 páginas → lotes de 4 páginas com junção dos resultados. Erros 429 (limite) e 402 (créditos) viram mensagem clara na tela sem quebrar o fluxo. PDF não passa pela tela de mapeamento.
+- **Trava de confiança (segunda chamada)**: o modelo extrai saldo inicial e final quando existirem. Valida `saldo_inicial + créditos − débitos = saldo_final`. Se não fechar, alerta amarelo no topo da conferência com o valor da divergência. Não bloqueia a importação.
+- **CSV / XLSX**: parsing determinístico + tela de mapeamento de colunas (data, descrição, valor, e sinal ou coluna débito/crédito).
+- **OFX**: parser próprio das tags `STMTTRN` lendo `DTPOSTED`, `TRNAMT`, `MEMO`, `NAME`, `FITID`.
+- Limites: 2000 linhas por arquivo, 30 páginas por PDF, com mensagem clara ao estourar.
 
-## Tabelas novas propostas
+## Categoria sugerida
 
-### 1. `moneyzap_bank_accounts`
-Origem do padrão de entidade por conta.
+Ordem: regra do usuário em `moneyzap_merchant_rules` → dicionário estático `src/utils/statement/defaultMerchants.ts` (~100 estabelecimentos brasileiros, incluindo regionais do Sul: Zaffari, Panvel, Farmácias São João, Havan, Renner, Shell, Ipiranga, iFood, Uber, 99, Rappi, Mercado Livre) → vazio. Sem migração para o dicionário. Toda categorização manual faz upsert da regra do usuário.
 
-| coluna | tipo | notas |
-|---|---|---|
-| id | uuid PK | default gen_random_uuid() |
-| user_id | uuid NOT NULL | referencia auth.users (sem FK, por regra do projeto) |
-| name | text NOT NULL | "Nubank PJ" |
-| bank_code | text NULL | |
-| account_hint | text NULL | últimos dígitos |
-| entidade_default | smallint NOT NULL default 1 | 1 PF / 2 PJ |
-| is_active | boolean NOT NULL default true |
-| created_at / updated_at | timestamptz default now() |
-
-Índice: `(user_id, is_active)`.
-
-### 2. `moneyzap_statement_imports`
-Um registro por arquivo enviado. É o que garante a não duplicação de arquivo.
-
-| coluna | tipo | notas |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid NOT NULL | |
-| upload_id | uuid NULL | FK -> moneyzap_uploads(id) ON DELETE SET NULL |
-| bank_account_id | uuid NULL | FK -> moneyzap_bank_accounts(id) ON DELETE SET NULL |
-| file_name | text NOT NULL | |
-| file_hash | text NOT NULL | SHA-256 do conteúdo bruto |
-| file_format | text NOT NULL | 'csv' \| 'ofx' \| 'xlsx' |
-| entidade_default | smallint NOT NULL default 1 | |
-| status | text NOT NULL default 'pending' | pending / reviewing / completed / discarded |
-| period_start / period_end | date NULL | |
-| total_rows, imported_rows, skipped_rows, reconciled_rows | integer NOT NULL default 0 |
-| created_at / updated_at | timestamptz default now() |
-
-Índices: `UNIQUE (user_id, file_hash)` — reenvio do mesmo arquivo é detectado; `(user_id, created_at desc)`.
-
-### 3. `moneyzap_statement_lines` (staging)
-Nada aqui é transação. É a área de conferência.
-
-| coluna | tipo | notas |
-|---|---|---|
-| id | uuid PK | |
-| import_id | uuid NOT NULL | FK -> moneyzap_statement_imports(id) ON DELETE CASCADE |
-| user_id | uuid NOT NULL | |
-| row_index | integer NOT NULL | ordem no arquivo |
-| raw_line | jsonb NOT NULL | linha original íntegra |
-| line_hash | text NOT NULL | hash de data+valor+descrição+fitid |
-| fitid | text NULL | id do OFX quando existir |
-| posted_at | date NOT NULL | |
-| description_raw | text NOT NULL | |
-| merchant_key | text NOT NULL | descrição normalizada (upper, sem acento/números/ruído) |
-| amount | numeric NOT NULL | sempre positivo |
-| direction | text NOT NULL | 'income' \| 'expense' |
-| entidade | smallint NOT NULL default 1 | herdada da conta, editável por linha |
-| suggested_category_id | uuid NULL | FK -> moneyzap_categories(id) ON DELETE SET NULL |
-| category_id | uuid NULL | escolha do usuário |
-| match_status | text NOT NULL default 'new' | new / possible_duplicate / reconciled / imported / ignored |
-| match_transaction_id | uuid NULL | FK -> moneyzap_transactions(id) ON DELETE SET NULL |
-| match_score | numeric NULL | |
-| match_reason | jsonb NULL | diffs de valor/data que geraram a suspeita |
-| selected | boolean NOT NULL default false | marcação do usuário |
-| created_transaction_id | uuid NULL | FK -> moneyzap_transactions(id) ON DELETE SET NULL |
-| created_at / updated_at | timestamptz default now() |
-
-Índices: `UNIQUE (import_id, line_hash)`, `(user_id, posted_at)`, `(import_id, match_status)`.
-
-### 4. `moneyzap_merchant_rules` (de-para que aprende por usuário)
-
-| coluna | tipo | notas |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid NOT NULL | |
-| merchant_key | text NOT NULL | chave normalizada |
-| category_id | uuid NOT NULL | FK -> moneyzap_categories(id) ON DELETE CASCADE |
-| entidade | smallint NOT NULL default 1 | regra é por entidade |
-| direction | text NOT NULL | 'income' \| 'expense' |
-| hit_count | integer NOT NULL default 1 | |
-| last_used_at | timestamptz default now() |
-| created_at / updated_at | timestamptz default now() |
-
-Índice: `UNIQUE (user_id, merchant_key, entidade, direction)`; `(user_id, merchant_key)`.
-
-### 5. Alterações em tabela existente
-`moneyzap_transactions` recebe três colunas nullable (nenhuma quebra de código existente):
-`reconciled_at timestamptz NULL`, `statement_line_id uuid NULL`, `import_id uuid NULL`.
-Nada é removido, nada muda de default.
-
-### RLS (todas as tabelas novas)
-Padrão idêntico ao já usado no projeto — dono só vê o que é dele:
-
-```sql
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.<tabela> TO authenticated;
-GRANT ALL ON public.<tabela> TO service_role;
-ALTER TABLE public.<tabela> ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "own select" ON public.<tabela> FOR SELECT TO authenticated USING (auth.uid() = user_id);
--- insert/update/delete idem com WITH CHECK (auth.uid() = user_id)
-```
-Sem grant para `anon` em nenhuma delas. `moneyzap_statement_lines` também valida que o `import_id` pertence ao usuário.
-
-## Arquivos e componentes
+## Arquivos
 
 Novos:
-- `src/types/statements.ts` — tipos de import, linha, regra, resultado de match.
-- `src/utils/statement/parseCsv.ts`, `parseOfx.ts`, `parseXlsx.ts`, `normalizeMerchant.ts`, `hashFile.ts` — parsing determinístico, zero IA.
-- `src/services/statementImportService.ts` — upload (via `register_upload`), criação do import, checagem de `file_hash`, leitura/gravação das linhas.
-- `src/services/reconciliationService.ts` — busca de candidatos e cálculo de match.
-- `src/services/merchantRuleService.ts` — leitura/gravação do de-para.
-- `src/pages/StatementImportPage.tsx` — rota `/importar-extrato`.
-- `src/components/statements/UploadStep.tsx`, `ReviewTable.tsx`, `ReviewRow.tsx`, `DuplicateBadge.tsx`, `ReconcileDialog.tsx`, `ImportSummaryBar.tsx`, `BankAccountSelect.tsx`.
-- `src/hooks/useStatementImport.ts`.
+- `supabase/functions/parse-bank-statement-pdf/index.ts`
+- `src/types/statements.ts`
+- `src/utils/statement/normalizeMerchant.ts`, `hashLine.ts`, `parseCsv.ts`, `parseXlsx.ts`, `parseOfx.ts`, `parsePdf.ts`, `defaultMerchants.ts`
+- `src/services/statementImportService.ts`, `src/services/reconciliationService.ts`, `src/services/merchantRuleService.ts`
+- `src/hooks/useStatementImport.ts`
+- `src/pages/StatementImportPage.tsx`
+- `src/components/statements/UploadStep.tsx`, `ColumnMappingStep.tsx`, `ReviewTable.tsx`, `ReviewRow.tsx`, `ReconcileDialog.tsx`, `BalanceWarning.tsx`, `ImportSummaryBar.tsx`
 
-Alterados:
-- `src/App.tsx` — nova rota protegida.
-- `src/components/layout/Sidebar.tsx` e `MobileNavBar.tsx` — item de menu.
-- `src/types/index.ts` — campos opcionais `reconciled_at`, `statement_line_id` em `Transaction`.
-- `src/contexts/AppContext.tsx` — recarregar transações após confirmação da importação.
-- `src/integrations/supabase/types.ts` — regenerado automaticamente pela migração.
-- `package.json` — `xlsx` para XLSX (CSV e OFX com parser próprio).
+Alterados (mínimo):
+- `src/App.tsx` — rota protegida `/importar-extrato`
+- `src/components/layout/Sidebar.tsx` e `src/components/layout/MobileNavBar.tsx` — item de menu
+- `src/types/index.ts` — campos opcionais de conciliação em `Transaction`
+- `src/contexts/AppContext.tsx` — um único refetch ao final da confirmação
+- `package.json` — `pdfjs-dist` e `xlsx`
 
-Nada de edge function nova na fase 1: parsing no cliente e escrita via cliente Supabase com RLS. Se algum arquivo grande justificar, movemos para edge function na fase 2 junto com PDF.
+Nenhuma outra tela existente é tocada. Sem fechamento de mês, sem mexer no agente de WhatsApp.
 
-## Tela de conferência, campo por campo
+## Tela de conferência
 
-Cabeçalho: nome do arquivo, formato, período detectado, conta bancária (select, define entidade padrão), toggle de entidade padrão do lote, contadores (total / novas / possíveis duplicatas / selecionadas).
+Cabeçalho: arquivo, formato, período, toggle PF/PJ do lote, contadores (total / novas / possíveis duplicatas / ignoradas / selecionadas) e, quando houver, o alerta amarelo de divergência de saldo.
 
-Barra de filtros: todas | só novas | só possíveis duplicatas | sem categoria; busca por descrição.
+Filtros: todas | novas | possíveis duplicatas | sem categoria | ignoradas; busca por descrição.
 
-Tabela, uma linha por lançamento do extrato:
-1. checkbox "importar" (marcado só pelo usuário; possíveis duplicatas começam desmarcadas)
-2. data — editável (date picker), mostra a data original do arquivo em tooltip
-3. descrição do banco — texto original, somente leitura, com o `merchant_key` em legenda
-4. valor — editável, formatado em BRL, cor por direção
-5. direção — chip Receita/Despesa, trocável
-6. categoria — `CategoryChips`/select já existentes, filtrados por tipo + entidade da linha; se veio de regra aprendida, exibe selo "sugerido"
-7. entidade — toggle PF/PJ por linha, default herdado da conta
-8. status — chip: Nova | Possível duplicata | Conciliada | Ignorada
-9. ações — "Conciliar com existente" (abre diálogo), "Importar como nova", "Ignorar"
+Colunas por linha: checkbox de importar · data (editável) · descrição do banco (somente leitura, com `merchant_key` em legenda) · valor (editável) · direção (chip trocável) · categoria (chips filtrados por tipo + entidade, com selo "sugerido") · entidade (toggle por linha) · status (Nova / Possível duplicata / Conciliada / Ignorada) · ações (Conciliar, Importar como nova, Ignorar).
 
-Diálogo de conciliação: lado a lado a linha do extrato e o lançamento existente (data, valor, descrição, categoria, entidade), diferença de valor em R$ e %, diferença em dias, e dois botões: "Conciliar (atualiza o existente com o dado do banco)" e "Importar como registro novo".
+Diálogo de conciliação: extrato × lançamento existente lado a lado, diferença em R$, % e dias; botão "Conciliar" oculto quando o candidato tem meta.
 
-Rodapé fixo: "X de Y selecionadas — importar", com resumo do que será criado e do que será conciliado, e confirmação antes de gravar.
+Rodapé fixo: "X de Y selecionadas", resumo do que será criado e conciliado, confirmação antes de gravar.
 
-## Algoritmo de conciliação (pseudocódigo)
+## Algoritmo de conciliação
 
 ```text
-para cada linha L do arquivo:
-  candidatos = transações do usuário onde
-      user_id = L.user_id
-      e type = L.direction
-      e date entre L.posted_at - 3 dias e L.posted_at + 3 dias
-      e não vinculada a outra linha deste import
+candidatos = transações do usuário onde
+    type = L.direction
+    e date entre L.posted_at - 3 e L.posted_at + 3
+    e reconciled_at IS NULL
+    e user_id IS NOT NULL
+    e não vinculada a outra linha deste import
 
-  melhores = []
-  para cada C em candidatos:
-      difValor = abs(C.amount - L.amount)
-      difPct   = difValor / max(C.amount, 0.01)
-      if difValor <= 5.00 ou difPct <= 0.03:
-          difDias = abs(dias(C.date, L.posted_at))
-          score = 0.6 * (1 - min(difValor / 5.00, 1))
-                + 0.3 * (1 - difDias / 3)
-                + 0.1 * similaridade(C.description, L.description_raw)
-          melhores.push({C, score, difValor, difPct, difDias})
+para cada C:
+    difValor = abs(C.amount - L.amount)
+    difPct   = difValor / max(C.amount, 0.01)
+    se difValor <= 5.00 ou difPct <= 0.03:
+        score = 0.6*(1 - min(difValor/5,1)) + 0.3*(1 - difDias/3) + 0.1*similaridade(descrições)
 
-  se melhores não vazio:
-      L.match_status = 'possible_duplicate'
-      L.match_transaction_id = melhores[maior score].C.id
-      L.match_score / L.match_reason = detalhes
-      L.selected = false            -- nunca decide sozinho
-  senão:
-      L.match_status = 'new'
+se houver candidato: match_status='possible_duplicate', guarda melhor score e match_reason, selected=false
+senão: match_status='new'
 
-  -- categoria por de-para aprendido
-  regra = merchant_rules[user_id, L.merchant_key, L.entidade, L.direction]
-  se regra: L.suggested_category_id = regra.category_id
+categoria = regra do usuário  ->  dicionário estático  ->  vazio
 ```
 
-Confirmação do usuário:
+Na confirmação:
 ```text
-para cada linha selecionada:
-  se ação = 'importar como nova':
-      insert em moneyzap_transactions (type, amount, date, description,
-          category_id, entidade, user_id, statement_line_id, import_id)
-  se ação = 'conciliar':
-      update moneyzap_transactions do match:
-          amount = L.amount, date = L.posted_at,
-          description = L.description_raw,
-          reconciled_at = now(), statement_line_id = L.id
-      -- o registro original é mantido, nunca recriado
-  se o usuário trocou a categoria manualmente:
-      upsert merchant_rules(user_id, merchant_key, entidade, direction, category_id)
-      hit_count = hit_count + 1
+importar como nova  -> insert em moneyzap_transactions (type, amount, date, description,
+                       category_id, entidade, user_id, statement_line_id, import_id)
+conciliar           -> update do registro existente:
+                       original_amount/original_description = valores atuais (só se reconciled_at IS NULL)
+                       amount, date, description = dado do banco
+                       reconciled_at = now(), statement_line_id = L.id
+categoria alterada  -> upsert em moneyzap_merchant_rules, hit_count + 1
+ao final            -> um único refetch do AppContext
 ```
 
-Reenvio do mesmo arquivo: antes do parse, calcula SHA-256; se já existe `(user_id, file_hash)`, abre o import anterior em vez de criar outro. Dentro de um import, `UNIQUE (import_id, line_hash)` impede linha repetida.
+## Riscos
 
-## O que preciso de você antes de começar
-
-1. Contas bancárias: crio a tabela `moneyzap_bank_accounts` com uma tela simples de cadastro, ou na fase 1 basta escolher a entidade padrão no momento do upload (sem cadastro de conta)?
-2. Layout de CSV: seus bancos exportam em formatos diferentes. Faço um mapeador manual de colunas na tela de upload (você aponta qual coluna é data, valor, descrição) ou fixo os layouts de bancos específicos? Quais bancos?
-3. Sinal do valor: em CSV/XLSX a direção vem do sinal do valor (negativo = despesa) ou de uma coluna separada tipo débito/crédito?
-4. Conciliação com lançamento já conciliado antes: pode reconciliar de novo ou fica bloqueado?
-
-## Riscos e o que pode quebrar
-
-- `moneyzap_transactions.user_id` é nullable e o RLS depende dele; a importação sempre preencherá, mas dados antigos sem `user_id` não aparecem como candidatos de conciliação.
-- `AppContext.tsx` já é grande e concentra transações e categorias; a importação em lote pode gerar refetch pesado. Mitigação: um único refetch ao final da confirmação, não por linha.
-- Regeneração de `src/integrations/supabase/types.ts` após a migração pode expor erros de tipo latentes em telas antigas.
-- Ao conciliar, sobrescrevemos valor/data/descrição de um lançamento existente — é destrutivo sobre o dado que o usuário digitou. Mitigação: diálogo mostra o antes e depois e a ação nunca é automática.
-- Se a transação conciliada estiver vinculada a uma meta (`goal_id`), mudar o valor exige acertar o saldo da meta via `update_goal_amount` com a diferença — ponto de atenção na implementação.
-- Assimetria `entidade` (escalar) vs `entidades` (array) é fonte recorrente de bug; o filtro de categorias na tela de conferência precisa usar `contains`.
-- Parsing no cliente: arquivos muito grandes (milhares de linhas) podem travar a UI. Mitigação: limite de linhas na fase 1 e processamento em lotes.
+- Migração bloqueada por preferência de aprovação: preciso que a permissão de migrações seja liberada em Cloud → permissões do agente.
+- Regenerar `src/integrations/supabase/types.ts` pode expor erros de tipo latentes em telas antigas.
+- Conciliação sobrescreve dado digitado pelo usuário — mitigado por `original_amount`/`original_description` e confirmação manual.
+- Extração de PDF por IA pode errar linhas; mitigada pela conferência obrigatória e pela trava de saldo.
+- Assimetria `entidade`/`entidades` é fonte recorrente de bug e será respeitada em todos os filtros novos.
