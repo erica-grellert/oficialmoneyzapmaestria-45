@@ -66,7 +66,7 @@ async function callModel(pagesText: string[], offset: number): Promise<BatchResu
     .join("\n\n");
 
   const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
   const res = await fetch(url, {
     method: "POST",
