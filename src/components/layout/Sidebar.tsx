@@ -132,6 +132,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onProfileClick, onConfigClick }) => {
       href: "/categories",
     },
     {
+      icon: FileSpreadsheet,
+      label: "Importar extrato",
+      href: "/statements/import",
+    },
+
+    {
       icon: Target,
       label: t("nav.goals"),
       href: "/goals",
