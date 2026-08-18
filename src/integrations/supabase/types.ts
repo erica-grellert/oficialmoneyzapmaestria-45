@@ -92,6 +92,53 @@ export type Database = {
         }
         Relationships: []
       }
+      moneyzap_merchant_rules: {
+        Row: {
+          category_id: string
+          created_at: string
+          direction: string
+          entidade: number
+          hit_count: number
+          id: string
+          last_used_at: string
+          merchant_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          direction: string
+          entidade?: number
+          hit_count?: number
+          id?: string
+          last_used_at?: string
+          merchant_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          direction?: string
+          entidade?: number
+          hit_count?: number
+          id?: string
+          last_used_at?: string
+          merchant_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moneyzap_merchant_rules_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "moneyzap_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       moneyzap_settings: {
         Row: {
           category: string
@@ -178,6 +225,197 @@ export type Database = {
           },
         ]
       }
+      moneyzap_statement_imports: {
+        Row: {
+          balance_check_diff: number | null
+          closing_balance: number | null
+          created_at: string
+          entidade_default: number
+          file_format: string
+          file_hash: string
+          file_name: string
+          id: string
+          imported_rows: number
+          opening_balance: number | null
+          period_end: string | null
+          period_start: string | null
+          reconciled_rows: number
+          skipped_rows: number
+          status: string
+          total_rows: number
+          updated_at: string
+          upload_id: string | null
+          user_id: string
+        }
+        Insert: {
+          balance_check_diff?: number | null
+          closing_balance?: number | null
+          created_at?: string
+          entidade_default?: number
+          file_format: string
+          file_hash: string
+          file_name: string
+          id?: string
+          imported_rows?: number
+          opening_balance?: number | null
+          period_end?: string | null
+          period_start?: string | null
+          reconciled_rows?: number
+          skipped_rows?: number
+          status?: string
+          total_rows?: number
+          updated_at?: string
+          upload_id?: string | null
+          user_id: string
+        }
+        Update: {
+          balance_check_diff?: number | null
+          closing_balance?: number | null
+          created_at?: string
+          entidade_default?: number
+          file_format?: string
+          file_hash?: string
+          file_name?: string
+          id?: string
+          imported_rows?: number
+          opening_balance?: number | null
+          period_end?: string | null
+          period_start?: string | null
+          reconciled_rows?: number
+          skipped_rows?: number
+          status?: string
+          total_rows?: number
+          updated_at?: string
+          upload_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moneyzap_statement_imports_upload_id_fkey"
+            columns: ["upload_id"]
+            isOneToOne: false
+            referencedRelation: "moneyzap_uploads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      moneyzap_statement_lines: {
+        Row: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          created_transaction_id: string | null
+          description_raw: string
+          direction: string
+          entidade: number
+          fitid: string | null
+          id: string
+          import_id: string
+          line_hash: string
+          match_reason: Json | null
+          match_score: number | null
+          match_status: string
+          match_transaction_id: string | null
+          merchant_key: string
+          occurrence: number
+          posted_at: string
+          raw_line: Json
+          row_index: number
+          selected: boolean
+          suggested_category_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          created_transaction_id?: string | null
+          description_raw: string
+          direction: string
+          entidade?: number
+          fitid?: string | null
+          id?: string
+          import_id: string
+          line_hash: string
+          match_reason?: Json | null
+          match_score?: number | null
+          match_status?: string
+          match_transaction_id?: string | null
+          merchant_key: string
+          occurrence?: number
+          posted_at: string
+          raw_line?: Json
+          row_index?: number
+          selected?: boolean
+          suggested_category_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          created_transaction_id?: string | null
+          description_raw?: string
+          direction?: string
+          entidade?: number
+          fitid?: string | null
+          id?: string
+          import_id?: string
+          line_hash?: string
+          match_reason?: Json | null
+          match_score?: number | null
+          match_status?: string
+          match_transaction_id?: string | null
+          merchant_key?: string
+          occurrence?: number
+          posted_at?: string
+          raw_line?: Json
+          row_index?: number
+          selected?: boolean
+          suggested_category_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moneyzap_statement_lines_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "moneyzap_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moneyzap_statement_lines_created_transaction_id_fkey"
+            columns: ["created_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "moneyzap_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moneyzap_statement_lines_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "moneyzap_statement_imports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moneyzap_statement_lines_match_transaction_id_fkey"
+            columns: ["match_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "moneyzap_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moneyzap_statement_lines_suggested_category_id_fkey"
+            columns: ["suggested_category_id"]
+            isOneToOne: false
+            referencedRelation: "moneyzap_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       moneyzap_subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -230,6 +468,11 @@ export type Database = {
           entidade: number
           goal_id: string | null
           id: string
+          import_id: string | null
+          original_amount: number | null
+          original_description: string | null
+          reconciled_at: string | null
+          statement_line_id: string | null
           type: string
           updated_at: string | null
           user_id: string | null
@@ -243,6 +486,11 @@ export type Database = {
           entidade?: number
           goal_id?: string | null
           id?: string
+          import_id?: string | null
+          original_amount?: number | null
+          original_description?: string | null
+          reconciled_at?: string | null
+          statement_line_id?: string | null
           type: string
           updated_at?: string | null
           user_id?: string | null
@@ -256,6 +504,11 @@ export type Database = {
           entidade?: number
           goal_id?: string | null
           id?: string
+          import_id?: string | null
+          original_amount?: number | null
+          original_description?: string | null
+          reconciled_at?: string | null
+          statement_line_id?: string | null
           type?: string
           updated_at?: string | null
           user_id?: string | null
