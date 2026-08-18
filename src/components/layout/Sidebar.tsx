@@ -15,6 +15,8 @@ import {
   User,
   Settings,
   FolderOpen,
+  FileSpreadsheet,
+
   Calendar,
   Crown,
   LogOut,
@@ -131,6 +133,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onProfileClick, onConfigClick }) => {
       label: t("nav.categories"),
       href: "/categories",
     },
+    {
+      icon: FileSpreadsheet,
+      label: "Importar extrato",
+      href: "/statements/import",
+    },
+
     {
       icon: Target,
       label: t("nav.goals"),

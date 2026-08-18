@@ -21,6 +21,8 @@ import GoalsPage from "./pages/GoalsPage";
 import ReportsPage from "./pages/ReportsPage";
 
 import CategoriesPage from "./pages/CategoriesPage";
+import StatementImportPage from "./pages/StatementImportPage";
+
 import PlansPage from "./pages/PlansPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import PaymentSuccessPage from "./pages/PaymentSuccessPage";
@@ -117,6 +119,15 @@ function App() {
                         </PrivateRoute>
                       }
                     />
+                    <Route
+                      path="/statements/import"
+                      element={
+                        <PrivateRoute>
+                          <StatementImportPage />
+                        </PrivateRoute>
+                      }
+                    />
+
                     <Route
                       path="/referral"
                       element={
