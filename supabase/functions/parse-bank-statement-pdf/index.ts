@@ -1,6 +1,7 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+const GEMINI_MODEL = "gemini-3.6-flash";
 const MAX_PAGES = 30;
 const BATCH_SIZE = 4;
 const BATCH_THRESHOLD = 6;
