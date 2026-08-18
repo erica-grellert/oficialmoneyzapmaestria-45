@@ -86,17 +86,34 @@ export const parsePdf = async (file: File | Blob): Promise<ParseResult> => {
   );
 
   if (error) {
-    const status = (error as any)?.context?.status;
+    const ctx = (error as any)?.context;
+    const status = ctx?.status;
+
+    // tenta ler a mensagem real devolvida pela edge function
+    let serverMessage: string | null = null;
+    let serverCode: string | undefined;
+    try {
+      const body = await ctx?.json?.();
+      if (body?.error) {
+        serverMessage = typeof body.error === "string" ? body.error : JSON.stringify(body.error);
+        serverCode = body.code;
+      }
+    } catch {
+      try {
+        const text = await ctx?.text?.();
+        if (text) serverMessage = text.slice(0, 800);
+      } catch {
+        /* ignora */
+      }
+    }
+
+    if (serverMessage) {
+      throw new StatementPdfError(serverMessage, serverCode ?? "invoke_error");
+    }
     if (status === 429) {
       throw new StatementPdfError(
         "Limite de uso da IA atingido. Aguarde alguns instantes e tente novamente, ou importe o extrato em CSV/OFX.",
         "rate_limit"
-      );
-    }
-    if (status === 402) {
-      throw new StatementPdfError(
-        "Os créditos de IA acabaram. Adicione créditos no workspace para importar PDFs.",
-        "payment_required"
       );
     }
     throw new StatementPdfError(
@@ -104,6 +121,7 @@ export const parsePdf = async (file: File | Blob): Promise<ParseResult> => {
       "invoke_error"
     );
   }
+
 
   if (data?.error) {
     throw new StatementPdfError(data.error, data.code);
