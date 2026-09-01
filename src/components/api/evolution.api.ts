@@ -1,10 +1,10 @@
 export const sendTextMessage = async (phoneNumber: string, message: string) => {
   return await fetch(
-    "https://evolution-api-production-9f1e.up.railway.app/message/sendText/meu controle ia",
+    "https://evolution-api-production-9f1e.up.railway.app/message/sendText/MeuControleIA",
     {
       method: "POST",
       headers: {
-        apikey: "EE68EB9F982D-4097-B4F6-D2C4CD8ED154",
+        apikey: "51B6C739EA8C-41B4-BA76-16AC4DF80742",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
