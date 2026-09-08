@@ -144,7 +144,11 @@ const LatestTransactions: React.FC<LatestTransactionsProps> = ({
                 <div className="flex items-center gap-2 text-xs text-[#64748B]">
                   <span>{translateCategory(transaction.category)}</span>
                   <span>•</span>
-                  <span>{format(createLocalDate(transaction.date), 'HH:mm')}</span>
+                  <span>
+                    {format(createLocalDate(transaction.date), "dd MMM, HH:mm", {
+                      locale: pt,
+                    })}
+                  </span>
                 </div>
               </div>
               

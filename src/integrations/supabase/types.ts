@@ -92,6 +92,30 @@ export type Database = {
         }
         Relationships: []
       }
+      moneyzap_impersonation_logs: {
+        Row: {
+          admin_id: string
+          id: string
+          started_at: string
+          target_email: string | null
+          target_user_id: string
+        }
+        Insert: {
+          admin_id: string
+          id?: string
+          started_at?: string
+          target_email?: string | null
+          target_user_id: string
+        }
+        Update: {
+          admin_id?: string
+          id?: string
+          started_at?: string
+          target_email?: string | null
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       moneyzap_merchant_rules: {
         Row: {
           category_id: string

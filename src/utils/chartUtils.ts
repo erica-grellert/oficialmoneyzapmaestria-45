@@ -1,5 +1,6 @@
 
 import { Transaction } from '@/types';
+import { createLocalDate, toAmount } from '@/utils/transactionUtils';
 
 export interface ChartData {
   date: string;
@@ -28,18 +29,20 @@ export const generateChartDataFromTransactions = (
     
     // Process transactions for current month
     transactions.forEach(transaction => {
-      const transactionDate = new Date(transaction.date);
+      const transactionDate = createLocalDate(transaction.date);
+      if (Number.isNaN(transactionDate.getTime())) return;
       
       // Check if transaction is in current month
       if (transactionDate.getFullYear() === year && transactionDate.getMonth() === month) {
         const day = transactionDate.getDate();
         const dayIndex = day - 1; // Array is 0-indexed
+        const amount = toAmount(transaction.amount);
         
         if (dayIndex >= 0 && dayIndex < daysInMonth) {
-          if (transaction.type === 'income') {
-            dailyData[dayIndex].receitas += transaction.amount;
+          if (String(transaction.type).toLowerCase().trim() === 'income') {
+            dailyData[dayIndex].receitas += amount;
           } else {
-            dailyData[dayIndex].despesas += transaction.amount;
+            dailyData[dayIndex].despesas += amount;
           }
         }
       }
@@ -65,13 +68,15 @@ export const generateChartDataFromTransactions = (
       
       // Process transactions for this month
       transactions.forEach(transaction => {
-        const transactionDate = new Date(transaction.date);
+        const transactionDate = createLocalDate(transaction.date);
+        if (Number.isNaN(transactionDate.getTime())) return;
         
         if (transactionDate.getFullYear() === monthYear && transactionDate.getMonth() === monthIndex) {
-          if (transaction.type === 'income') {
-            monthData.receitas += transaction.amount;
+          const amount = toAmount(transaction.amount);
+          if (String(transaction.type).toLowerCase().trim() === 'income') {
+            monthData.receitas += amount;
           } else {
-            monthData.despesas += transaction.amount;
+            monthData.despesas += amount;
           }
         }
       });

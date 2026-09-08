@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import AdminProfileConfig from "@/components/admin/AdminProfileConfig";
 import AdminSectionTabs from "@/components/admin/AdminSectionTabs";
+import UserImpersonationManager from "@/components/admin/UserImpersonationManager";
 import MobileNavBar from "@/components/layout/MobileNavBar";
 import MobileHeader from "@/components/layout/MobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -17,6 +18,7 @@ import { Shield, Users, CreditCard, BarChart3, LogOut } from "lucide-react";
 import { AdminOptimizedProvider } from "@/contexts/AdminOptimizedContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { logoutConsideringImpersonation } from "@/lib/impersonation";
 
 const AdminDashboard: React.FC = () => {
   const [showProfile, setShowProfile] = useState(false);
@@ -47,48 +49,29 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await logout();
-    navigate("/");
+    const result = await logoutConsideringImpersonation(logout);
+    navigate(result === "restored" ? "/admin" : "/");
   };
 
   // Fetch real system stats from database
   useEffect(() => {
     const fetchSystemStats = async () => {
       try {
-        // Use service role client to bypass RLS policies for admin dashboard
-        const { createClient } = await import("@supabase/supabase-js");
-
-        // Create service role client (bypasses RLS)
-        const serviceClient = createClient(
-          process.env.REACT_APP_SUPABASE_URL || "",
-          process.env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY || "",
-          {
-            auth: {
-              autoRefreshToken: false,
-              persistSession: false,
-            },
-          }
-        );
-
-        // Count users from moneyzap_users
-        const { count: userCount } = await serviceClient
+        const { count: userCount } = await supabase
           .from("moneyzap_users")
           .select("*", { count: "exact", head: true });
 
-        // Count active subscriptions from moneyzap_subscriptions
-        const { count: activeSubscriptionCount } = await serviceClient
+        const { count: activeSubscriptionCount } = await supabase
           .from("moneyzap_subscriptions")
           .select("*", { count: "exact", head: true })
           .eq("status", "active");
 
-        // Count cancelled subscriptions from moneyzap_subscriptions
-        const { count: cancelledSubscriptionCount } = await serviceClient
+        const { count: cancelledSubscriptionCount } = await supabase
           .from("moneyzap_subscriptions")
           .select("*", { count: "exact", head: true })
           .eq("status", "cancelled");
 
-        // Count transactions from moneyzap_transactions
-        const { count: transactionCount } = await serviceClient
+        const { count: transactionCount } = await supabase
           .from("moneyzap_transactions")
           .select("*", { count: "exact", head: true });
 
@@ -101,37 +84,6 @@ const AdminDashboard: React.FC = () => {
         }));
       } catch (error) {
         console.error("Error fetching system stats:", error);
-
-        // Fallback: try with regular client (might work if user is admin)
-        try {
-          const { count: userCount } = await supabase
-            .from("moneyzap_users")
-            .select("*", { count: "exact", head: true });
-
-          const { count: activeSubscriptionCount } = await supabase
-            .from("moneyzap_subscriptions")
-            .select("*", { count: "exact", head: true })
-            .eq("status", "active");
-
-          const { count: cancelledSubscriptionCount } = await supabase
-            .from("moneyzap_subscriptions")
-            .select("*", { count: "exact", head: true })
-            .eq("status", "cancelled");
-
-          const { count: transactionCount } = await supabase
-            .from("moneyzap_transactions")
-            .select("*", { count: "exact", head: true });
-
-          setSystemStats((prev) => ({
-            ...prev,
-            activeUsers: userCount || 0,
-            totalTransactions: transactionCount || 0,
-            activeSubscriptions: activeSubscriptionCount || 0,
-            cancelledSubscriptions: cancelledSubscriptionCount || 0,
-          }));
-        } catch (fallbackError) {
-          console.error("Fallback query also failed:", fallbackError);
-        }
       }
     };
 
@@ -242,6 +194,10 @@ const AdminDashboard: React.FC = () => {
         </div>
 
         {renderStatusOverview()}
+
+        <div className="mb-8">
+          <UserImpersonationManager />
+        </div>
 
         {/* Navegação por Abas */}
         <Card className={cardClass}>

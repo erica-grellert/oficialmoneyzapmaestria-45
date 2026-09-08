@@ -6,6 +6,7 @@ import { useAdaptiveContext } from "@/hooks/useAdaptiveContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useBrandingConfig } from "@/hooks/useBrandingConfig";
+import { logoutConsideringImpersonation } from "@/lib/impersonation";
 
 import {
   LayoutDashboard,
@@ -38,8 +39,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onProfileClick, onConfigClick }) => {
   // Verificar se estamos na página de administração
   const isAdminPage = location.pathname === "/admin";
   const handleLogout = async () => {
-    await logout();
-    navigate("/");
+    const result = await logoutConsideringImpersonation(logout);
+    navigate(result === "restored" ? "/admin" : "/");
   };
   const handleProfileClick = () => {
     if (isAdmin && isAdminPage && onProfileClick) {

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import SubscriptionGuard from "@/components/subscription/SubscriptionGuard";
 import TopBar from "@/components/navigation/TopBar";
+import MobileHeader from "@/components/layout/MobileHeader";
 import MobileNavBar from "@/components/layout/MobileNavBar";
 import DashboardHeader from "./DashboardHeader";
 import QuickActions from "./QuickActions";
@@ -14,7 +15,12 @@ import GoalsSummary from "./GoalsSummary";
 import FloatingActionButton from "@/components/navigation/FloatingActionButton";
 import { TransactionFormV2 } from "@/components/common/TransactionFormV2";
 import { useAdaptiveContext } from "@/hooks/useAdaptiveContext";
-import { calculateMonthlyFinancialData } from "@/utils/transactionUtils";
+import {
+  calculatePeriodFinancialData,
+  getDashboardPeriodBounds,
+  getPreviousPeriodBounds,
+  percentChange,
+} from "@/utils/transactionUtils";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +35,8 @@ import ReferralStatusCard from "@/components/referral/ReferralStatusCard";
 const CleanDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation() as { state?: { justRegistered?: boolean } };
-  const { transactions, goals } = useAdaptiveContext();
+  const { transactions, goals, hideValues, toggleHideValues } =
+    useAdaptiveContext();
   const [selectedPeriod, setSelectedPeriod] = useState("current-month");
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>();
   const [isLoading, setIsLoading] = useState(true);
@@ -73,14 +80,34 @@ const CleanDashboard = () => {
     localStorage.setItem("dashboard-period", period);
   };
 
-  // Calculate data based on current period
-  const currentMonth = new Date();
-  const monthlyData = calculateMonthlyFinancialData(transactions, currentMonth);
+  const periodBounds = useMemo(
+    () => getDashboardPeriodBounds(selectedPeriod, dateRange),
+    [selectedPeriod, dateRange]
+  );
+
+  const monthlyData = useMemo(
+    () =>
+      calculatePeriodFinancialData(
+        transactions,
+        periodBounds.start,
+        periodBounds.end
+      ),
+    [transactions, periodBounds]
+  );
   const { monthlyIncome, monthlyExpenses, accumulatedBalance } = monthlyData;
 
-  // Mock KPI data with variations
-  const kpiData = useMemo(
-    () => ({
+  const kpiData = useMemo(() => {
+    const previousBounds = getPreviousPeriodBounds(
+      periodBounds.start,
+      periodBounds.end
+    );
+    const previous = calculatePeriodFinancialData(
+      transactions,
+      previousBounds.start,
+      previousBounds.end
+    );
+
+    return {
       totalBalance: accumulatedBalance,
       totalIncome: monthlyIncome,
       totalExpenses: monthlyExpenses,
@@ -90,14 +117,23 @@ const CleanDashboard = () => {
         total: goals.length,
       },
       variations: {
-        balance: Math.random() * 20 - 10, // Mock variation
-        income: Math.random() * 15,
-        expenses: Math.random() * -10,
-        goals: Math.random() * 25,
+        balance: percentChange(
+          accumulatedBalance,
+          previous.accumulatedBalance
+        ),
+        income: percentChange(monthlyIncome, previous.monthlyIncome),
+        expenses: percentChange(monthlyExpenses, previous.monthlyExpenses),
+        goals: 0,
       },
-    }),
-    [accumulatedBalance, monthlyIncome, monthlyExpenses, goals]
-  );
+    };
+  }, [
+    accumulatedBalance,
+    monthlyIncome,
+    monthlyExpenses,
+    goals,
+    transactions,
+    periodBounds,
+  ]);
 
   // Handler for MobileNavBar
   const handleAddTransactionFromNav = (type: "income" | "expense") => {
@@ -184,6 +220,10 @@ const CleanDashboard = () => {
   return (
     <>
       <TopBar />
+      <MobileHeader
+        hideValues={hideValues}
+        toggleHideValues={toggleHideValues}
+      />
 
       <SubscriptionGuard>
         <div className="min-h-screen bg-slate-50/50">
@@ -222,7 +262,7 @@ const CleanDashboard = () => {
             variants={container}
             initial="hidden"
             animate="visible"
-            className="w-full max-w-none px-3 xs:px-4 sm:px-6 lg:px-8 xl:px-10 py-3 xs:py-4 md:py-6 pb-20 md:pb-6"
+            className="w-full max-w-none px-3 xs:px-4 sm:px-6 lg:px-8 xl:px-10 pt-16 md:pt-6 pb-20 md:pb-6"
           >
             {/* Header */}
             <motion.div variants={item}>

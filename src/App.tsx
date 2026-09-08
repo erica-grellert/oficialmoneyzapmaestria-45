@@ -31,6 +31,7 @@ import ReferralPage from "./pages/ReferralPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import AdminRoute from "./components/admin/AdminRoute";
+import ImpersonationBanner from "./components/admin/ImpersonationBanner";
 import "./App.css";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ function App() {
             <SubscriptionProvider>
               <AppProvider>
                 <BrowserRouter>
+                  <ImpersonationBanner />
                   <Routes>
                     {/* Public routes */}
                     <Route path="/" element={<LandingPage />} />

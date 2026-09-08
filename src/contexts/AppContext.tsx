@@ -251,7 +251,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     return {
       id: dbTransaction.id,
       type: dbTransaction.type as "income" | "expense",
-      amount: dbTransaction.amount,
+      amount: Number(dbTransaction.amount) || 0,
       category: dbTransaction.category?.name || "Unknown",
       categoryIcon: dbTransaction.category?.icon || "circle",
       categoryColor: dbTransaction.category?.color || "#607D8B",

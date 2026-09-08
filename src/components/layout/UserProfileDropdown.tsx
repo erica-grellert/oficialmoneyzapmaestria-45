@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAdaptiveContext } from "@/hooks/useAdaptiveContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
+import { logoutConsideringImpersonation } from "@/lib/impersonation";
 
 interface UserProfileDropdownProps {
   variant?: "default" | "ghost";
@@ -29,8 +30,8 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
 
   const handleLogout = async () => {
     try {
-      await logout();
-      navigate("/");
+      const result = await logoutConsideringImpersonation(logout);
+      navigate(result === "restored" ? "/admin" : "/");
     } catch (error) {
       console.error("Error during logout:", error);
     }

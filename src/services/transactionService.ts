@@ -20,7 +20,7 @@ export const getTransactions = async (): Promise<Transaction[]> => {
     return data.map((item) => ({
       id: item.id,
       type: item.type as "income" | "expense",
-      amount: item.amount,
+      amount: Number(item.amount) || 0,
       category: item.category?.name || "Outros",
       categoryIcon: item.category?.icon || "circle",
       categoryColor: item.category?.color || "#607D8B",
@@ -112,7 +112,7 @@ export const addTransaction = async (
     return {
       id: data.id,
       type: data.type as "income" | "expense",
-      amount: data.amount,
+      amount: Number(data.amount) || 0,
       category: data.category?.name || "Outros",
       categoryIcon: data.category?.icon || "circle",
       categoryColor: data.category?.color || "#607D8B",
@@ -209,7 +209,7 @@ export const updateTransaction = async (
     return {
       id: data.id,
       type: data.type as "income" | "expense",
-      amount: data.amount,
+      amount: Number(data.amount) || 0,
       category: data.category?.name || "Outros",
       categoryIcon: data.category?.icon || "circle",
       categoryColor: data.category?.color || "#607D8B",

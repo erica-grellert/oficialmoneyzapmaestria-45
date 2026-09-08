@@ -23,16 +23,153 @@ const getDaysAgoStart = (days: number) => {
   return daysAgo;
 };
 
+export const toAmount = (amount: unknown): number => {
+  const n =
+    typeof amount === "number" ? amount : parseFloat(String(amount ?? 0));
+  return Number.isFinite(n) ? n : 0;
+};
+
+const fromCalendarParts = (year: number, month: number, day: number): Date =>
+  new Date(year, month - 1, day);
+
 // Create a local date from string to avoid timezone issues
 export const createLocalDate = (dateString: string): Date => {
-  if (dateString.includes("-") && dateString.length === 10) {
-    // For YYYY-MM-DD format, create local date to avoid timezone conversion
-    const [year, month, day] = dateString.split("-").map(Number);
-    return new Date(year, month - 1, day); // month is 0-indexed
-  } else {
-    // For other formats, use normal Date constructor
-    return new Date(dateString);
+  if (!dateString) return new Date(NaN);
+
+  const trimmed = String(dateString).trim();
+
+  const dateOnly = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnly) {
+    return fromCalendarParts(
+      Number(dateOnly[1]),
+      Number(dateOnly[2]),
+      Number(dateOnly[3])
+    );
   }
+
+  // Midnight UTC is how date-only values are often stored after toISOString()
+  const utcMidnight = trimmed.match(
+    /^(\d{4})-(\d{2})-(\d{2})T00:00:00(\.\d+)?Z$/
+  );
+  if (utcMidnight) {
+    return fromCalendarParts(
+      Number(utcMidnight[1]),
+      Number(utcMidnight[2]),
+      Number(utcMidnight[3])
+    );
+  }
+
+  const brDate = trimmed.match(/^(\d{2})[/-](\d{2})[/-](\d{4})/);
+  if (brDate) {
+    return fromCalendarParts(
+      Number(brDate[3]),
+      Number(brDate[2]),
+      Number(brDate[1])
+    );
+  }
+
+  const normalized =
+    /^\d{4}-\d{2}-\d{2} \d{2}:/.test(trimmed) && !trimmed.includes("T")
+      ? trimmed.replace(" ", "T")
+      : trimmed;
+
+  return new Date(normalized);
+};
+
+const startOfLocalDay = (date: Date): Date =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+export const isTransactionInRange = (
+  dateString: string,
+  start: Date,
+  end: Date
+): boolean => {
+  const transactionDate = createLocalDate(dateString);
+  if (Number.isNaN(transactionDate.getTime())) return false;
+
+  const day = startOfLocalDay(transactionDate);
+  const startDay = startOfLocalDay(start);
+  const endDay = startOfLocalDay(end);
+  return day >= startDay && day <= endDay;
+};
+
+export const getDashboardPeriodBounds = (
+  period: string,
+  dateRange?: { from?: Date; to?: Date }
+): { start: Date; end: Date } => {
+  const now = new Date();
+  const monthStart = (year: number, month: number) => new Date(year, month, 1);
+  const monthEnd = (year: number, month: number) =>
+    new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+  switch (period) {
+    case "last-month": {
+      const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      const month = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+      return { start: monthStart(year, month), end: monthEnd(year, month) };
+    }
+    case "last-3-months":
+      return {
+        start: monthStart(now.getFullYear(), now.getMonth() - 2),
+        end: monthEnd(now.getFullYear(), now.getMonth()),
+      };
+    case "last-12-months":
+      return {
+        start: monthStart(now.getFullYear(), now.getMonth() - 11),
+        end: monthEnd(now.getFullYear(), now.getMonth()),
+      };
+    case "custom": {
+      if (dateRange?.from) {
+        const to = dateRange.to || dateRange.from;
+        return {
+          start: startOfLocalDay(dateRange.from),
+          end: new Date(
+            to.getFullYear(),
+            to.getMonth(),
+            to.getDate(),
+            23,
+            59,
+            59,
+            999
+          ),
+        };
+      }
+      return {
+        start: monthStart(now.getFullYear(), now.getMonth()),
+        end: monthEnd(now.getFullYear(), now.getMonth()),
+      };
+    }
+    case "current-month":
+    default:
+      return {
+        start: monthStart(now.getFullYear(), now.getMonth()),
+        end: monthEnd(now.getFullYear(), now.getMonth()),
+      };
+  }
+};
+
+export const getPreviousPeriodBounds = (
+  start: Date,
+  end: Date
+): { start: Date; end: Date } => {
+  const startDay = startOfLocalDay(start);
+  const endDay = startOfLocalDay(end);
+  const durationDays = Math.max(
+    1,
+    Math.round((endDay.getTime() - startDay.getTime()) / 86_400_000) + 1
+  );
+  const prevEnd = new Date(startDay);
+  prevEnd.setDate(prevEnd.getDate() - 1);
+  prevEnd.setHours(23, 59, 59, 999);
+  const prevStart = new Date(prevEnd);
+  prevStart.setDate(prevStart.getDate() - (durationDays - 1));
+  prevStart.setHours(0, 0, 0, 0);
+  return { start: prevStart, end: prevEnd };
+};
+
+export const percentChange = (current: number, previous: number): number => {
+  if (previous === 0) return current === 0 ? 0 : 100;
+  return ((current - previous) / Math.abs(previous)) * 100;
 };
 
 // Filter transactions by time range
@@ -101,18 +238,65 @@ export const filterTransactionsByTimeRange = (
   }
 };
 
+const isIncome = (type: string) =>
+  String(type).toLowerCase().trim() === "income";
+
+const isExpense = (type: string) =>
+  String(type).toLowerCase().trim() === "expense";
+
 // Calculate total income
 export const calculateTotalIncome = (transactions: Transaction[]): number => {
   return transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .filter((t) => isIncome(t.type))
+    .reduce((sum, t) => sum + toAmount(t.amount), 0);
 };
 
 // Calculate total expenses
 export const calculateTotalExpenses = (transactions: Transaction[]): number => {
   return transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .filter((t) => isExpense(t.type))
+    .reduce((sum, t) => sum + toAmount(t.amount), 0);
+};
+
+export const calculatePeriodFinancialData = (
+  allTransactions: Transaction[],
+  start: Date,
+  end: Date
+) => {
+  const monthTransactions = allTransactions.filter((transaction) =>
+    isTransactionInRange(transaction.date, start, end)
+  );
+
+  const monthlyIncome = calculateTotalIncome(monthTransactions);
+  const monthlyExpenses = calculateTotalExpenses(monthTransactions);
+
+  const now = new Date();
+  const currentDateEnd = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999
+  );
+  const transactionsUpToCurrent = allTransactions.filter((transaction) => {
+    const transactionDate = createLocalDate(transaction.date);
+    return (
+      !Number.isNaN(transactionDate.getTime()) &&
+      transactionDate <= currentDateEnd
+    );
+  });
+  const accumulatedBalance =
+    calculateTotalIncome(transactionsUpToCurrent) -
+    calculateTotalExpenses(transactionsUpToCurrent);
+
+  return {
+    monthlyIncome,
+    monthlyExpenses,
+    accumulatedBalance,
+    monthTransactions,
+  };
 };
 
 // NEW: Calculate month-specific financial data
@@ -120,8 +304,6 @@ export const calculateMonthlyFinancialData = (
   allTransactions: Transaction[],
   selectedMonth: Date
 ) => {
-  const now = new Date();
-  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const selectedMonthStart = new Date(
     selectedMonth.getFullYear(),
     selectedMonth.getMonth(),
@@ -133,98 +315,15 @@ export const calculateMonthlyFinancialData = (
     0,
     23,
     59,
-    59
+    59,
+    999
   );
 
-  // Filter transactions for the selected month only
-  const monthTransactions = allTransactions.filter((transaction) => {
-    const transactionDate = new Date(transaction.date);
-    return (
-      transactionDate >= selectedMonthStart &&
-      transactionDate <= selectedMonthEnd
-    );
-  });
-
-  // Calculate income and expenses for the selected month
-  const monthlyIncome = calculateTotalIncome(monthTransactions);
-  const monthlyExpenses = calculateTotalExpenses(monthTransactions);
-
-  let accumulatedBalance = 0;
-
-  // Calculate accumulated balance based on month type
-  if (selectedMonthStart < currentMonth) {
-    // PREVIOUS MONTHS: Show balance of that specific month only
-    // This represents the balance that was available at the end of that month
-    const transactionsUpToSelectedMonth = allTransactions.filter(
-      (transaction) => {
-        const transactionDate = new Date(transaction.date);
-        return transactionDate <= selectedMonthEnd;
-      }
-    );
-    accumulatedBalance =
-      calculateTotalIncome(transactionsUpToSelectedMonth) -
-      calculateTotalExpenses(transactionsUpToSelectedMonth);
-    console.log("Previous month calculation:", {
-      transactionsCount: transactionsUpToSelectedMonth.length,
-      balance: accumulatedBalance,
-    });
-  } else if (selectedMonthStart.getTime() === currentMonth.getTime()) {
-    // CURRENT MONTH: Balance = all transactions up to current month (accumulated balance)
-    const currentDateEnd = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      23,
-      59,
-      59
-    );
-    const transactionsUpToCurrent = allTransactions.filter((transaction) => {
-      const transactionDate = new Date(transaction.date);
-      return transactionDate <= currentDateEnd;
-    });
-    accumulatedBalance =
-      calculateTotalIncome(transactionsUpToCurrent) -
-      calculateTotalExpenses(transactionsUpToCurrent);
-    console.log("Current month calculation:", {
-      transactionsCount: transactionsUpToCurrent.length,
-      balance: accumulatedBalance,
-    });
-  } else {
-    // FUTURE MONTHS: Show current accumulated balance (will be transported to future)
-    // No future transactions should be counted
-    const currentDateEnd = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      23,
-      59,
-      59
-    );
-    const transactionsUpToCurrent = allTransactions.filter((transaction) => {
-      const transactionDate = new Date(transaction.date);
-      return transactionDate <= currentDateEnd;
-    });
-    accumulatedBalance =
-      calculateTotalIncome(transactionsUpToCurrent) -
-      calculateTotalExpenses(transactionsUpToCurrent);
-    console.log("Future month calculation:", {
-      transactionsCount: transactionsUpToCurrent.length,
-      balance: accumulatedBalance,
-    });
-
-    // For future months, income and expenses should be only what's already registered for that future month
-    // (the monthlyIncome and monthlyExpenses calculated above are correct)
-  }
-
-  const result = {
-    monthlyIncome,
-    monthlyExpenses,
-    accumulatedBalance,
-    monthTransactions,
-  };
-
-  console.log("Final monthly calculation result:", result);
-  return result;
+  return calculatePeriodFinancialData(
+    allTransactions,
+    selectedMonthStart,
+    selectedMonthEnd
+  );
 };
 
 // NEW: Get transactions for specific month range
@@ -246,10 +345,9 @@ export const getTransactionsForMonth = (
     59
   );
 
-  return transactions.filter((transaction) => {
-    const transactionDate = new Date(transaction.date);
-    return transactionDate >= monthStart && transactionDate <= monthEnd;
-  });
+  return transactions.filter((transaction) =>
+    isTransactionInRange(transaction.date, monthStart, monthEnd)
+  );
 };
 
 // NEW: Get goals for specific month

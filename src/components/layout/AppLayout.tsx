@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import TopBar from '@/components/navigation/TopBar';
+import MobileHeader from '@/components/layout/MobileHeader';
 import MobileNavBar from '@/components/layout/MobileNavBar';
 import FloatingActionButton from '@/components/navigation/FloatingActionButton';
 import { cn } from '@/lib/utils';
 import { TransactionFormV2 } from '@/components/common/TransactionFormV2';
+import { useAdaptiveContext } from '@/hooks/useAdaptiveContext';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -16,6 +18,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   className, 
   showFAB = true 
 }) => {
+  const { hideValues, toggleHideValues } = useAdaptiveContext();
   const [formOpen, setFormOpen] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<'income' | 'expense'>('expense');
 
@@ -27,9 +30,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   return (
     <div className="min-h-screen bg-background">
       <TopBar />
+      <MobileHeader hideValues={hideValues} toggleHideValues={toggleHideValues} />
       
       <main className={cn(
-        'min-h-screen pb-20 md:pb-0',
+        'min-h-screen pb-20 md:pb-0 pt-16 md:pt-0',
         'transition-all duration-200',
         className
       )}>

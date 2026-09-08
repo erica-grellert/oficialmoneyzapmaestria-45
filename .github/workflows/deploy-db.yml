@@ -187,6 +187,7 @@ jobs:
         supabase functions deploy update-admin-email --project-ref "$SUPABASE_PROJECT_ID"
         supabase functions deploy update-user-email --project-ref "$SUPABASE_PROJECT_ID"
         supabase functions deploy generate-html --project-ref "$SUPABASE_PROJECT_ID"
+        supabase functions deploy impersonate-user --project-ref "$SUPABASE_PROJECT_ID"
 
         echo "✅ All Edge Functions deployed"
 
@@ -212,6 +213,14 @@ jobs:
           -H "Content-Type: application/json" \
           -d '{"verify_jwt": false, "import_map": true}' \
           || echo "⚠️  generate-html configuration may need manual setup"
+
+        # impersonate-user: JWT is verified inside the function so OPTIONS preflight can succeed
+        curl -sS -X PATCH \
+          "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_ID/functions/impersonate-user" \
+          -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{"verify_jwt": false, "import_map": true}' \
+          || echo "⚠️  impersonate-user configuration may need manual setup"
 
         echo "✅ Public functions configured"
 
