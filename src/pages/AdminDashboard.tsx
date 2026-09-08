@@ -55,6 +55,9 @@ const AdminDashboard: React.FC = () => {
 
   const [activeWorkspace, setActiveWorkspace] =
     useState<AdminWorkspaceId>("overview");
+  const [visitedWorkspaces, setVisitedWorkspaces] = useState<
+    Set<AdminWorkspaceId>
+  >(() => new Set(["overview"]));
   const [systemStats, setSystemStats] = useState<SystemStats>(EMPTY_STATS);
   const [statsStatus, setStatsStatus] = useState<StatsStatus>("loading");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -63,6 +66,16 @@ const AdminDashboard: React.FC = () => {
     () => getAdminWorkspace(activeWorkspace),
     [activeWorkspace]
   );
+
+  const selectWorkspace = useCallback((workspaceId: AdminWorkspaceId) => {
+    setVisitedWorkspaces((current) => {
+      if (current.has(workspaceId)) return current;
+      const next = new Set(current);
+      next.add(workspaceId);
+      return next;
+    });
+    setActiveWorkspace(workspaceId);
+  }, []);
 
   const fetchSystemStats = useCallback(async (manual = false) => {
     try {
@@ -135,8 +148,13 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     if (!contentRef.current || reducedMotion) return;
 
+    const activePanel = contentRef.current.querySelector(
+      `[data-workspace-panel="${activeWorkspace}"]`
+    );
+    if (!activePanel) return;
+
     gsap.fromTo(
-      contentRef.current,
+      activePanel,
       { opacity: 0, y: 14 },
       { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }
     );
@@ -173,7 +191,7 @@ const AdminDashboard: React.FC = () => {
               <Button
                 type="button"
                 className="admin-button-ink rounded-xl"
-                onClick={() => setActiveWorkspace("users")}
+                onClick={() => selectWorkspace("users")}
               >
                 <Users className="mr-2 h-4 w-4" />
                 Abrir usuários
@@ -296,10 +314,10 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  const renderWorkspace = () => {
-    if (activeWorkspace === "overview") return renderOverview();
-    if (activeWorkspace === "users") return <UserImpersonationManager />;
-    if (activeWorkspace === "profile") {
+  const renderWorkspace = (workspaceId: AdminWorkspaceId) => {
+    if (workspaceId === "overview") return renderOverview();
+    if (workspaceId === "users") return <UserImpersonationManager />;
+    if (workspaceId === "profile") {
       return (
         <section className="space-y-5">
           <header className="admin-surface p-6">
@@ -318,7 +336,7 @@ const AdminDashboard: React.FC = () => {
       );
     }
 
-    return <AdminWorkspacePanel workspaceId={activeWorkspace} />;
+    return <AdminWorkspacePanel workspaceId={workspaceId} />;
   };
 
   return (
@@ -341,7 +359,7 @@ const AdminDashboard: React.FC = () => {
               <div className="flex-1 overflow-y-auto pr-1">
                 <AdminWorkspaceNav
                   activeId={activeWorkspace}
-                  onSelect={setActiveWorkspace}
+                  onSelect={selectWorkspace}
                 />
               </div>
 
@@ -350,7 +368,7 @@ const AdminDashboard: React.FC = () => {
                   type="button"
                   variant="outline"
                   className="admin-button-ghost w-full justify-start rounded-xl"
-                  onClick={() => setActiveWorkspace("profile")}
+                  onClick={() => selectWorkspace("profile")}
                 >
                   <Shield className="mr-2 h-4 w-4" />
                   Perfil
@@ -391,7 +409,7 @@ const AdminDashboard: React.FC = () => {
                       type="button"
                       variant="outline"
                       className="admin-button-ghost rounded-xl"
-                      onClick={() => setActiveWorkspace("overview")}
+                      onClick={() => selectWorkspace("overview")}
                     >
                       <ArrowLeft className="mr-2 h-4 w-4" />
                       Visão geral
@@ -401,7 +419,7 @@ const AdminDashboard: React.FC = () => {
                     type="button"
                     variant="outline"
                     className="admin-button-ghost rounded-xl lg:hidden"
-                    onClick={() => setActiveWorkspace("profile")}
+                    onClick={() => selectWorkspace("profile")}
                   >
                     <Shield className="mr-2 h-4 w-4" />
                     Perfil
@@ -422,13 +440,27 @@ const AdminDashboard: React.FC = () => {
                 <div data-admin-reveal className="mb-5">
                   <AdminWorkspaceNav
                     activeId={activeWorkspace}
-                    onSelect={setActiveWorkspace}
+                    onSelect={selectWorkspace}
                     compact
                   />
                 </div>
               )}
 
-              <div ref={contentRef}>{renderWorkspace()}</div>
+              <div ref={contentRef}>
+                {Array.from(visitedWorkspaces).map((workspaceId) => {
+                  const isActive = workspaceId === activeWorkspace;
+                  return (
+                    <div
+                      key={workspaceId}
+                      data-workspace-panel={workspaceId}
+                      hidden={!isActive}
+                      aria-hidden={!isActive}
+                    >
+                      {renderWorkspace(workspaceId)}
+                    </div>
+                  );
+                })}
+              </div>
             </main>
           </div>
         </div>
