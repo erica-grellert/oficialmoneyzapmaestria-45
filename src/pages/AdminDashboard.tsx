@@ -1,427 +1,437 @@
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import gsap from "gsap";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card-modern";
+  ArrowLeft,
+  BarChart3,
+  CreditCard,
+  LogOut,
+  RefreshCw,
+  Shield,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AdminProfileConfig from "@/components/admin/AdminProfileConfig";
-import AdminSectionTabs from "@/components/admin/AdminSectionTabs";
 import UserImpersonationManager from "@/components/admin/UserImpersonationManager";
-import MobileNavBar from "@/components/layout/MobileNavBar";
-import MobileHeader from "@/components/layout/MobileHeader";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useAdaptiveContext } from "@/hooks/useAdaptiveContext";
-import { Shield, Users, CreditCard, BarChart3, LogOut } from "lucide-react";
+import AdminConstellation from "@/components/admin/experience/AdminConstellation";
+import AdminMetricCard from "@/components/admin/experience/AdminMetricCard";
+import AdminWorkspaceNav from "@/components/admin/experience/AdminWorkspaceNav";
+import AdminWorkspacePanel from "@/components/admin/experience/AdminWorkspacePanel";
+import {
+  getAdminWorkspace,
+  type AdminWorkspaceId,
+} from "@/components/admin/experience/adminWorkspaces";
 import { AdminOptimizedProvider } from "@/contexts/AdminOptimizedContext";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useAdaptiveContext } from "@/hooks/useAdaptiveContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { usePrefersReducedMotion } from "@/hooks/useAdminExperience";
 import { logoutConsideringImpersonation } from "@/lib/impersonation";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import "@/styles/admin-editorial.css";
+
+interface SystemStats {
+  activeUsers: number;
+  totalTransactions: number;
+  activeSubscriptions: number;
+  cancelledSubscriptions: number;
+}
+
+type StatsStatus = "loading" | "ready" | "error";
+
+const EMPTY_STATS: SystemStats = {
+  activeUsers: 0,
+  totalTransactions: 0,
+  activeSubscriptions: 0,
+  cancelledSubscriptions: 0,
+};
 
 const AdminDashboard: React.FC = () => {
-  const [showProfile, setShowProfile] = useState(false);
   const isMobile = useIsMobile();
-  const { hideValues, toggleHideValues, logout } = useAdaptiveContext();
+  const reducedMotion = usePrefersReducedMotion();
+  const { logout } = useAdaptiveContext();
   const navigate = useNavigate();
-  const [systemStats, setSystemStats] = useState({
-    activeUsers: 0,
-    totalTransactions: 0,
-    activeSubscriptions: 0,
-    cancelledSubscriptions: 0,
-    systemUptime: "99.9%",
-    lastBackup: "2 hours ago",
-    pendingTasks: 3,
-    completedTasks: 156,
-  });
+  const shellRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
-  const handleProfileClick = () => {
-    setShowProfile(true);
-  };
+  const [activeWorkspace, setActiveWorkspace] =
+    useState<AdminWorkspaceId>("overview");
+  const [systemStats, setSystemStats] = useState<SystemStats>(EMPTY_STATS);
+  const [statsStatus, setStatsStatus] = useState<StatsStatus>("loading");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleConfigClick = () => {
-    setShowProfile(false);
-  };
+  const currentWorkspace = useMemo(
+    () => getAdminWorkspace(activeWorkspace),
+    [activeWorkspace]
+  );
 
-  const handleAddTransaction = (type: "income" | "expense") => {
-    console.log(`Add ${type} transaction`);
-  };
+  const fetchSystemStats = useCallback(async (manual = false) => {
+    try {
+      if (manual) setIsRefreshing(true);
+      else setStatsStatus("loading");
+
+      const [
+        { count: userCount, error: userError },
+        { count: activeSubscriptionCount, error: activeError },
+        { count: cancelledSubscriptionCount, error: cancelledError },
+        { count: transactionCount, error: transactionError },
+      ] = await Promise.all([
+        supabase.from("moneyzap_users").select("*", { count: "exact", head: true }),
+        supabase
+          .from("moneyzap_subscriptions")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "active"),
+        supabase
+          .from("moneyzap_subscriptions")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "cancelled"),
+        supabase
+          .from("moneyzap_transactions")
+          .select("*", { count: "exact", head: true }),
+      ]);
+
+      if (userError || activeError || cancelledError || transactionError) {
+        throw userError || activeError || cancelledError || transactionError;
+      }
+
+      setSystemStats({
+        activeUsers: userCount || 0,
+        totalTransactions: transactionCount || 0,
+        activeSubscriptions: activeSubscriptionCount || 0,
+        cancelledSubscriptions: cancelledSubscriptionCount || 0,
+      });
+      setStatsStatus("ready");
+    } catch (error) {
+      console.error("Error fetching system stats:", error);
+      setStatsStatus("error");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchSystemStats();
+  }, [fetchSystemStats]);
+
+  useEffect(() => {
+    if (!shellRef.current || reducedMotion) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        "[data-admin-reveal]",
+        { opacity: 0, y: 18 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.7,
+          stagger: 0.08,
+          ease: "power3.out",
+        }
+      );
+    }, shellRef);
+
+    return () => ctx.revert();
+  }, [reducedMotion]);
+
+  useEffect(() => {
+    if (!contentRef.current || reducedMotion) return;
+
+    gsap.fromTo(
+      contentRef.current,
+      { opacity: 0, y: 14 },
+      { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }
+    );
+  }, [activeWorkspace, reducedMotion]);
 
   const handleLogout = async () => {
     const result = await logoutConsideringImpersonation(logout);
     navigate(result === "restored" ? "/admin" : "/");
   };
 
-  // Fetch real system stats from database
-  useEffect(() => {
-    const fetchSystemStats = async () => {
-      try {
-        const { count: userCount } = await supabase
-          .from("moneyzap_users")
-          .select("*", { count: "exact", head: true });
-
-        const { count: activeSubscriptionCount } = await supabase
-          .from("moneyzap_subscriptions")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "active");
-
-        const { count: cancelledSubscriptionCount } = await supabase
-          .from("moneyzap_subscriptions")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "cancelled");
-
-        const { count: transactionCount } = await supabase
-          .from("moneyzap_transactions")
-          .select("*", { count: "exact", head: true });
-
-        setSystemStats((prev) => ({
-          ...prev,
-          activeUsers: userCount || 0,
-          totalTransactions: transactionCount || 0,
-          activeSubscriptions: activeSubscriptionCount || 0,
-          cancelledSubscriptions: cancelledSubscriptionCount || 0,
-        }));
-      } catch (error) {
-        console.error("Error fetching system stats:", error);
-      }
-    };
-
-    fetchSystemStats();
-  }, []);
-
-  // Remove all automatic refresh listeners
-  React.useEffect(() => {
-    // Disable all page refresh triggers for admin
-    const disableAutoRefresh = () => {
-      // Remove any interval-based refreshes
-      const intervalId = window.setInterval(() => {}, 86400000); // 24h dummy interval
-      window.clearInterval(intervalId);
-
-      // Disable page refresh on tab changes
-      const originalAddEventListener = window.addEventListener;
-      const originalRemoveEventListener = window.removeEventListener;
-
-      const blockedEvents = [
-        "visibilitychange",
-        "focus",
-        "blur",
-        "pageshow",
-        "pagehide",
-      ];
-
-      // Override addEventListener para bloquear eventos problemáticos
-      window.addEventListener = function (
-        type: string,
-        listener: EventListenerOrEventListenerObject,
-        options?: boolean | AddEventListenerOptions
-      ) {
-        if (blockedEvents.includes(type)) {
-          return;
-        }
-        return originalAddEventListener.call(this, type, listener, options);
-      };
-
-      // Note: getEventListeners is not available in all browsers
-      // This is a simplified approach that just blocks new problematic listeners
-    };
-
-    disableAutoRefresh();
-
-    return () => {
-      // Restore original addEventListener on cleanup
-      // (será restaurado quando sair da página admin)
-    };
-  }, []);
-
-  const renderDashboardContent = (isMobile: boolean) => {
-    const containerClass = isMobile ? "w-full" : "w-full max-w-7xl mx-auto";
-    const cardClass = isMobile
-      ? "border-slate-200 bg-white/80 backdrop-blur-sm"
-      : "border-slate-200 bg-white/90 backdrop-blur-sm shadow-soft";
-    const titleClass = isMobile ? "text-slate-800" : "text-slate-800 text-xl";
-
-    return (
-      <motion.div
-        className={containerClass}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
+  const renderOverview = () => (
+    <div className="space-y-6">
+      <section
+        data-admin-reveal
+        className="admin-surface relative overflow-hidden p-6 md:p-8"
       >
-        <div className="mb-8">
-          <div
-            className={`flex items-center gap-4 ${isMobile ? "mb-6" : "mb-8"}`}
-          >
-            <div
-              className={`p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl ${
-                !isMobile ? "shadow-lg" : ""
-              }`}
-            >
-              <Shield
-                className={`${isMobile ? "h-10 w-10" : "h-12 w-12"} text-white`}
-              />
+        <AdminConstellation stats={systemStats} />
+        <div className="relative z-[1] grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+          <div>
+            <div className="admin-gold-chip mb-5">
+              <Shield className="h-3.5 w-3.5" />
+              Centro de Controle
             </div>
-            <div className="flex-1">
-              <h1
-                className={`${
-                  isMobile ? "text-4xl" : "text-5xl"
-                } font-bold bg-gradient-to-r from-slate-900 ${
-                  isMobile ? "to-blue-800" : "via-blue-800 to-purple-800"
-                } bg-clip-text text-transparent`}
+            <h1 className="admin-display text-4xl md:text-6xl">
+              Operação com
+              <br />
+              precisão editorial.
+            </h1>
+            <p className="mt-4 max-w-xl text-sm text-[var(--admin-muted)] md:text-base">
+              Monitore métricas, entre como usuário, ajuste a plataforma e
+              recupere falhas operacionais em um único workspace.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button
+                type="button"
+                className="admin-button-ink rounded-xl"
+                onClick={() => setActiveWorkspace("users")}
               >
-                Centro de Controle
-              </h1>
-              <p
-                className={`text-slate-600 ${
-                  isMobile ? "mt-2 text-lg" : "mt-3 text-xl"
-                }`}
+                <Users className="mr-2 h-4 w-4" />
+                Abrir usuários
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="admin-button-ghost rounded-xl"
+                onClick={() => void fetchSystemStats(true)}
+                disabled={isRefreshing}
               >
-                Monitore e gerencie todo o ecossistema da plataforma
-                {!isMobile && " com ferramentas avançadas"}
-              </p>
+                <RefreshCw
+                  className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                />
+                Atualizar métricas
+              </Button>
             </div>
-            <Button
-              onClick={handleProfileClick}
-              variant="outline"
-              className={`border-blue-200 text-blue-600 hover:bg-blue-50 ${
-                isMobile ? "px-4 py-2" : "px-6 py-3"
-              }`}
-            >
-              <Shield className={`${isMobile ? "h-4 w-4" : "h-5 w-5"} mr-2`} />
-              Perfil
-            </Button>
+          </div>
+
+          <div className="admin-surface-quiet relative min-h-[220px] overflow-hidden p-5">
+            <p className="admin-kicker">Constelação do sistema</p>
+            <p className="mt-3 max-w-xs text-sm text-[var(--admin-muted)]">
+              Densidade e pulso reagem às métricas ao vivo. Em dispositivos
+              leves, uma versão estática preserva o clima visual.
+            </p>
+            <div className="admin-hairline my-5" />
+            <dl className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <dt className="text-[var(--admin-muted)]">Usuários</dt>
+                <dd className="mt-1 font-semibold">
+                  {statsStatus === "ready" ? systemStats.activeUsers : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--admin-muted)]">Transações</dt>
+                <dd className="mt-1 font-semibold">
+                  {statsStatus === "ready" ? systemStats.totalTransactions : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--admin-muted)]">Ativas</dt>
+                <dd className="mt-1 font-semibold">
+                  {statsStatus === "ready"
+                    ? systemStats.activeSubscriptions
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--admin-muted)]">Canceladas</dt>
+                <dd className="mt-1 font-semibold">
+                  {statsStatus === "ready"
+                    ? systemStats.cancelledSubscriptions
+                    : "—"}
+                </dd>
+              </div>
+            </dl>
           </div>
         </div>
+      </section>
 
-        {renderStatusOverview()}
-
-        <div className="mb-8">
-          <UserImpersonationManager />
+      {statsStatus === "error" ? (
+        <div className="admin-surface border-orange-200 bg-orange-50/70 p-5">
+          <p className="font-semibold text-[var(--admin-danger)]">
+            Não foi possível carregar as métricas.
+          </p>
+          <p className="mt-1 text-sm text-[var(--admin-muted)]">
+            Verifique a conexão e tente novamente. Os workspaces operacionais
+            continuam disponíveis.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="admin-button-ghost mt-4 rounded-xl"
+            onClick={() => void fetchSystemStats(true)}
+          >
+            Tentar novamente
+          </Button>
         </div>
-
-        {/* Navegação por Abas */}
-        <Card className={cardClass}>
-          <CardHeader>
-            <CardTitle className={titleClass}>
-              Gerenciamento do Sistema
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AdminSectionTabs />
-          </CardContent>
-        </Card>
-      </motion.div>
-    );
-  };
-
-  const renderStatusOverview = () => {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+      ) : (
+        <div
+          data-admin-reveal
+          className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
         >
-          <Card
-            variant="interactive"
-            className="p-4 border-blue-200 bg-blue-50/50 h-full"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">Usuários</p>
-                <p className="text-xl font-bold text-blue-900">
-                  {systemStats.activeUsers.toLocaleString()}
-                </p>
-              </div>
-              <div className="p-2 bg-blue-100 rounded-full">
-                <Users className="h-5 w-5 text-blue-600" />
-              </div>
-            </div>
-          </Card>
-        </motion.div>
+          <AdminMetricCard
+            label="Usuários"
+            value={systemStats.activeUsers}
+            hint="Contas registradas na plataforma"
+            icon={Users}
+            loading={statsStatus === "loading"}
+          />
+          <AdminMetricCard
+            label="Transações"
+            value={systemStats.totalTransactions}
+            hint="Movimentações totais registradas"
+            icon={BarChart3}
+            loading={statsStatus === "loading"}
+            tone="gold"
+          />
+          <AdminMetricCard
+            label="Assinaturas ativas"
+            value={systemStats.activeSubscriptions}
+            hint="Planos com status ativo"
+            icon={CreditCard}
+            loading={statsStatus === "loading"}
+          />
+          <AdminMetricCard
+            label="Assinaturas canceladas"
+            value={systemStats.cancelledSubscriptions}
+            hint="Planos encerrados"
+            icon={CreditCard}
+            loading={statsStatus === "loading"}
+            tone="danger"
+          />
+        </div>
+      )}
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card
-            variant="interactive"
-            className="p-4 border-green-200 bg-green-50/50 h-full"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">Transações</p>
-                <p className="text-xl font-bold text-green-900">
-                  {systemStats.totalTransactions.toLocaleString()}
-                </p>
-              </div>
-              <div className="p-2 bg-green-100 rounded-full">
-                <BarChart3 className="h-5 w-5 text-green-600" />
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card
-            variant="interactive"
-            className="p-4 border-purple-200 bg-purple-50/50 h-full"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-700">
-                  Assinaturas Ativas
-                </p>
-                <p className="text-xl font-bold text-purple-900">
-                  {systemStats.activeSubscriptions.toLocaleString()}
-                </p>
-              </div>
-              <div className="p-2 bg-purple-100 rounded-full">
-                <CreditCard className="h-5 w-5 text-purple-600" />
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <Card
-            variant="interactive"
-            className="p-4 border-red-200 bg-red-50/50 h-full"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-red-700">
-                  Assinaturas Canceladas
-                </p>
-                <p className="text-xl font-bold text-red-900">
-                  {systemStats.cancelledSubscriptions?.toLocaleString() || "0"}
-                </p>
-              </div>
-              <div className="p-2 bg-red-100 rounded-full">
-                <CreditCard className="h-5 w-5 text-red-600" />
-              </div>
-            </div>
-          </Card>
-        </motion.div>
+      <div data-admin-reveal>
+        <UserImpersonationManager />
       </div>
-    );
+    </div>
+  );
+
+  const renderWorkspace = () => {
+    if (activeWorkspace === "overview") return renderOverview();
+    if (activeWorkspace === "users") return <UserImpersonationManager />;
+    if (activeWorkspace === "profile") {
+      return (
+        <section className="space-y-5">
+          <header className="admin-surface p-6">
+            <p className="admin-kicker">Conta administrativa</p>
+            <h2 className="admin-display mt-2 text-3xl md:text-4xl">
+              Configurações do perfil
+            </h2>
+            <p className="mt-2 text-sm text-[var(--admin-muted)]">
+              Gerencie nome, e-mail e senha do administrador.
+            </p>
+          </header>
+          <div className="admin-surface p-4 md:p-6">
+            <AdminProfileConfig />
+          </div>
+        </section>
+      );
+    }
+
+    return <AdminWorkspacePanel workspaceId={activeWorkspace} />;
   };
 
   return (
     <AdminOptimizedProvider>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-purple-50/20 w-full">
-        {isMobile ? (
-          <div className="flex flex-col h-screen w-full">
-            <MobileHeader
-              hideValues={hideValues}
-              toggleHideValues={toggleHideValues}
-            />
-            <main className="flex-1 overflow-auto p-4 pb-20 w-full">
-              <div className="w-full">
-                {showProfile ? (
-                  <motion.div
-                    className="w-full"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <div className="mb-8">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-3 bg-blue-100 rounded-full">
-                          <Shield className="h-8 w-8 text-blue-600" />
-                        </div>
-                        <div className="flex-1">
-                          <h1 className="text-3xl font-bold text-slate-900">
-                            Configurações do Perfil
-                          </h1>
-                          <p className="text-slate-600 mt-1">
-                            Gerencie suas informações de administrador
-                          </p>
-                        </div>
-                        <Button
-                          onClick={handleConfigClick}
-                          variant="outline"
-                          className="ml-auto border-blue-200 text-blue-600 hover:bg-blue-50"
-                        >
-                          ← Voltar ao Painel
-                        </Button>
-                      </div>
-                    </div>
-                    <AdminProfileConfig />
-                  </motion.div>
-                ) : (
-                  renderDashboardContent(true)
-                )}
+      <div className="admin-editorial">
+        <div ref={shellRef} className="admin-shell mx-auto max-w-[1600px]">
+          <div className="grid min-h-screen lg:grid-cols-[280px_minmax(0,1fr)]">
+            <aside
+              data-admin-reveal
+              className="hidden border-r border-[var(--admin-line)] px-4 py-6 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col"
+            >
+              <div className="mb-8 px-2">
+                <p className="admin-kicker">Meu Controle.AI</p>
+                <h2 className="admin-display mt-2 text-3xl">Admin</h2>
+                <p className="mt-2 text-sm text-[var(--admin-muted)]">
+                  Workspace operacional
+                </p>
               </div>
-            </main>
-            <MobileNavBar onAddTransaction={handleAddTransaction} />
-          </div>
-        ) : (
-          <div className="min-h-screen w-full">
-            <main className="w-full p-6">
-              {showProfile ? (
-                <motion.div
-                  className="w-full max-w-6xl mx-auto"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <div className="mb-8">
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl">
-                        <Shield className="h-10 w-10 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 to-blue-800 bg-clip-text text-transparent">
-                          Configurações do Perfil
-                        </h1>
-                        <p className="text-slate-600 mt-2 text-lg">
-                          Gerencie suas informações de administrador
-                        </p>
-                      </div>
-                      <Button
-                        onClick={handleConfigClick}
-                        variant="outline"
-                        className="ml-auto border-blue-200 text-blue-600 hover:bg-blue-50"
-                      >
-                        ← Voltar ao Painel
-                      </Button>
-                    </div>
-                  </div>
-                  <AdminProfileConfig />
-                </motion.div>
-              ) : (
-                renderDashboardContent(false)
-              )}
-            </main>
-          </div>
-        )}
 
-        {/* Floating Logout Button */}
-        <motion.div
-          className="fixed bottom-6 right-6 z-50"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.5, duration: 0.3 }}
-        >
-          <Button
-            onClick={handleLogout}
-            variant="destructive"
-            size="lg"
-            className="h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
-          >
-            <LogOut className="h-6 w-6" />
-          </Button>
-        </motion.div>
+              <div className="flex-1 overflow-y-auto pr-1">
+                <AdminWorkspaceNav
+                  activeId={activeWorkspace}
+                  onSelect={setActiveWorkspace}
+                />
+              </div>
+
+              <div className="mt-6 space-y-2 border-t border-[var(--admin-line)] pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="admin-button-ghost w-full justify-start rounded-xl"
+                  onClick={() => setActiveWorkspace("profile")}
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  Perfil
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-start rounded-xl border-orange-200 text-[var(--admin-danger)] hover:bg-orange-50"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </Button>
+              </div>
+            </aside>
+
+            <main className="px-4 py-5 md:px-6 md:py-7 lg:px-8">
+              <header
+                data-admin-reveal
+                className="admin-surface sticky top-3 z-20 mb-5 flex flex-col gap-4 p-4 backdrop-blur-xl md:flex-row md:items-center md:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="admin-kicker">
+                    {currentWorkspace?.group === "plataforma"
+                      ? "Plataforma"
+                      : "Operação"}
+                  </p>
+                  <h1 className="admin-display mt-1 truncate text-2xl md:text-3xl">
+                    {activeWorkspace === "profile"
+                      ? "Perfil"
+                      : currentWorkspace?.label || "Admin"}
+                  </h1>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {activeWorkspace !== "overview" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="admin-button-ghost rounded-xl"
+                      onClick={() => setActiveWorkspace("overview")}
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      Visão geral
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="admin-button-ghost rounded-xl lg:hidden"
+                    onClick={() => setActiveWorkspace("profile")}
+                  >
+                    <Shield className="mr-2 h-4 w-4" />
+                    Perfil
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-xl border-orange-200 text-[var(--admin-danger)] hover:bg-orange-50 lg:hidden"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                  </Button>
+                </div>
+              </header>
+
+              {isMobile && (
+                <div data-admin-reveal className="mb-5">
+                  <AdminWorkspaceNav
+                    activeId={activeWorkspace}
+                    onSelect={setActiveWorkspace}
+                    compact
+                  />
+                </div>
+              )}
+
+              <div ref={contentRef}>{renderWorkspace()}</div>
+            </main>
+          </div>
+        </div>
       </div>
     </AdminOptimizedProvider>
   );

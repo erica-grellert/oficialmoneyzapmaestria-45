@@ -94,7 +94,13 @@ const CleanDashboard = () => {
       ),
     [transactions, periodBounds]
   );
-  const { monthlyIncome, monthlyExpenses, accumulatedBalance } = monthlyData;
+  const { monthlyIncome, monthlyExpenses, accumulatedBalance, monthTransactions } =
+    monthlyData;
+
+  const latestPeriodTransactions = useMemo(
+    () => monthTransactions.slice(0, 8),
+    [monthTransactions]
+  );
 
   const kpiData = useMemo(() => {
     const previousBounds = getPreviousPeriodBounds(
@@ -298,13 +304,17 @@ const CleanDashboard = () => {
               <div className="grid grid-cols-1 gap-3 xs:gap-4 sm:gap-6 xl:grid-cols-12 xl:gap-6 2xl:gap-8 mb-4 xs:mb-6 sm:mb-8">
                 {/* Chart */}
                 <div className="xl:col-span-7 2xl:col-span-8">
-                  <FinancialSummaryChart isLoading={isLoading} />
+                  <FinancialSummaryChart
+                    isLoading={isLoading}
+                    periodStart={periodBounds.start}
+                    periodEnd={periodBounds.end}
+                  />
                 </div>
 
                 {/* Transactions */}
                 <div className="xl:col-span-5 2xl:col-span-4">
                   <LatestTransactions
-                    transactions={transactions.slice(0, 8)}
+                    transactions={latestPeriodTransactions}
                     onEditTransaction={handleEditTransaction}
                     onRecategorizeTransaction={handleRecategorizeTransaction}
                     onViewAll={handleViewAllTransactions}

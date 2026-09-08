@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useAdaptiveContext } from "@/hooks/useAdaptiveContext";
 import { Transaction } from "@/types";
-import { createLocalDate } from "@/utils/transactionUtils";
+import { applyTransactionListFilters } from "@/utils/transactionUtils";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import FloatingActionButton from "@/components/navigation/FloatingActionButton";
 
@@ -58,48 +58,10 @@ const TransactionsPage = () => {
     });
   };
 
-  // Filter transactions based on current filters
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((transaction) => {
-      // Type filter
-      if (filters.type !== "all" && transaction.type !== filters.type) {
-        return false;
-      }
-
-      // Category filter
-      if (filters.category && transaction.category !== filters.category) {
-        return false;
-      }
-
-      // Date range filter
-      if (filters.dateRange) {
-        const transactionDate = createLocalDate(transaction.date);
-        const now = new Date();
-
-        switch (filters.dateRange) {
-          case "today": {
-            return transactionDate.toDateString() === now.toDateString();
-          }
-          case "week": {
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            return transactionDate >= weekAgo;
-          }
-          case "month": {
-            const monthAgo = new Date(
-              now.getFullYear(),
-              now.getMonth() - 1,
-              now.getDate()
-            );
-            return transactionDate >= monthAgo;
-          }
-          default:
-            return true;
-        }
-      }
-
-      return true;
-    });
-  }, [transactions, filters]);
+  const filteredTransactions = useMemo(
+    () => applyTransactionListFilters(transactions, filters),
+    [transactions, filters]
+  );
 
   const availableCategories = Array.from(
     new Set(transactions.map((t) => t.category || "Outros"))

@@ -262,7 +262,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       goal_id: dbTransaction.goal_id,
       user_id: dbTransaction.user_id,
       created_at: dbTransaction.created_at,
-      entidade: dbTransaction.entidade ?? 1,
+      entidade: Number(dbTransaction.entidade ?? 1),
     };
   };
 
@@ -849,12 +849,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
   // Filter transactions and categories by entidadeAtiva
   const filteredByEntidade = useMemo(() => {
+    const activeEntity = Number(state.entidadeAtiva);
     const transactions = state.transactions.filter(
-      (t: any) => (t.entidade ?? 1) === state.entidadeAtiva
+      (t: any) => Number(t.entidade ?? 1) === activeEntity
     );
     const categories = state.categories.filter((c: any) => {
       const ents = Array.isArray(c.entidades) ? c.entidades : [1];
-      return ents.includes(state.entidadeAtiva);
+      return ents.map(Number).includes(activeEntity);
     });
     return { transactions, categories };
   }, [state.transactions, state.categories, state.entidadeAtiva]);
@@ -923,6 +924,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       state.timeRange,
       state.customStartDate,
       state.customEndDate,
+      state.filteredTransactions,
       filteredByEntidade,
       toggleHideValues,
       logout,

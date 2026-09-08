@@ -1,49 +1,30 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { HelpCircle } from 'lucide-react';
 import { Tooltip as TooltipPrimitive, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { generateChartDataFromTransactions } from '@/utils/chartUtils';
+import { generateChartDataFromRange } from '@/utils/chartUtils';
 import { useAdaptiveContext } from '@/hooks/useAdaptiveContext';
-
-interface ChartData {
-  date: string;
-  dateNumber?: number;
-  receitas: number;
-  despesas: number;
-}
 
 interface FinancialSummaryChartProps {
   isLoading?: boolean;
+  periodStart?: Date;
+  periodEnd?: Date;
 }
 
-type PeriodType = 'currentMonth' | 'last12Months';
-
 const FinancialSummaryChart: React.FC<FinancialSummaryChartProps> = ({ 
-  isLoading = false 
+  isLoading = false,
+  periodStart,
+  periodEnd,
 }) => {
   const { currency } = usePreferences();
   const { transactions } = useAdaptiveContext();
-  const [periodType, setPeriodType] = useState<PeriodType>('currentMonth');
   const [visibleSeries, setVisibleSeries] = useState({
     receitas: true,
     despesas: true
   });
   const [blockTooltipVisible, setBlockTooltipVisible] = useState(false);
-
-  useEffect(() => {
-    const savedPeriodType = localStorage.getItem('chart-period-type') as PeriodType;
-    if (savedPeriodType && ['currentMonth', 'last12Months'].includes(savedPeriodType)) {
-      setPeriodType(savedPeriodType);
-    }
-  }, []);
-
-  const handlePeriodChange = (period: PeriodType) => {
-    setPeriodType(period);
-    localStorage.setItem('chart-period-type', period);
-  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -63,68 +44,12 @@ const FinancialSummaryChart: React.FC<FinancialSummaryChartProps> = ({
     return m % 1 === 0 ? `${m}M` : `${m.toFixed(1)}M`;
   };
 
-  // Generate chart data from real transactions
-  const chartData = useMemo(() => {
-    if (transactions && transactions.length > 0) {
-      const baseData = generateChartDataFromTransactions(transactions, periodType);
-      
-      // For current month, add numeric date for proper X-axis handling
-      if (periodType === 'currentMonth') {
-        return baseData.map(item => ({
-          ...item,
-          dateNumber: parseInt(item.date)
-        }));
-      }
-      
-      return baseData;
-    }
-    
-    // Return empty data structure if no transactions
-    if (periodType === 'currentMonth') {
-      const now = new Date();
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      return Array.from({ length: daysInMonth }, (_, i) => ({
-        date: (i + 1).toString(),
-        dateNumber: i + 1,
-        receitas: 0,
-        despesas: 0,
-      }));
-    } else {
-      const monthNames = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 
-                         'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-      return monthNames.map(month => ({
-        date: month,
-        receitas: 0,
-        despesas: 0,
-      }));
-    }
-  }, [transactions, periodType]);
-
-  // Generate ticks for current month
-  const currentMonthTicks = useMemo(() => {
-    if (periodType === 'currentMonth') {
-      const now = new Date();
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      
-      // Select key days to show on X-axis
-      const ticks = [1]; // Always show first day
-      
-      // Add intermediate days based on month length
-      if (daysInMonth >= 10) ticks.push(5);
-      if (daysInMonth >= 15) ticks.push(10);
-      if (daysInMonth >= 20) ticks.push(15);
-      if (daysInMonth >= 25) ticks.push(20);
-      if (daysInMonth >= 28) ticks.push(25);
-      
-      // Always add the last day if not already included
-      if (!ticks.includes(daysInMonth)) {
-        ticks.push(daysInMonth);
-      }
-      
-      return ticks;
-    }
-    return [];
-  }, [periodType]);
+  const { data: chartData, mode: chartMode } = useMemo(() => {
+    const now = new Date();
+    const start = periodStart ?? new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = periodEnd ?? new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return generateChartDataFromRange(transactions || [], start, end);
+  }, [transactions, periodStart, periodEnd]);
 
   const toggleSeries = (seriesKey: keyof typeof visibleSeries) => {
     setVisibleSeries(prev => {
@@ -143,12 +68,10 @@ const FinancialSummaryChart: React.FC<FinancialSummaryChartProps> = ({
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const receitasValue = payload.find((p: any) => p.dataKey === 'receitas')?.value || 0;
-      const despesasValue = payload.find((p: any) => p.dataKey === 'despesas')?.value || 0;
-
-      const formattedLabel = periodType === 'currentMonth' 
-        ? `${label}/${new Date().getMonth() + 1}/${new Date().getFullYear()}`
-        : `${label}/${new Date().getFullYear()}`;
+      const formattedLabel =
+        chartMode === 'daily' && periodStart
+          ? `${label}/${periodStart.getMonth() + 1}/${periodStart.getFullYear()}`
+          : String(label);
 
       return (
         <div className="bg-white p-4 border border-slate-200 rounded-xl shadow-lg">
@@ -238,32 +161,6 @@ const FinancialSummaryChart: React.FC<FinancialSummaryChartProps> = ({
               </TooltipPrimitive>
             </TooltipProvider>
           </div>
-          <div className="flex bg-slate-100 rounded-lg p-1">
-            <Button
-              variant={periodType === 'currentMonth' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => handlePeriodChange('currentMonth')}
-              className={`px-3 py-1 text-xs ${
-                periodType === 'currentMonth'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Mês atual
-            </Button>
-            <Button
-              variant={periodType === 'last12Months' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => handlePeriodChange('last12Months')}
-              className={`px-3 py-1 text-xs ${
-                periodType === 'last12Months'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Últimos 12 meses
-            </Button>
-          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -286,26 +183,14 @@ const FinancialSummaryChart: React.FC<FinancialSummaryChartProps> = ({
                 <CartesianGrid strokeDasharray="3 3" stroke="#EFF2F6" horizontal={true} vertical={false} />
                 
                 {/* Different XAxis configuration based on period type */}
-                {periodType === 'currentMonth' ? (
-                  <XAxis 
-                    type="number"
-                    dataKey="dateNumber"
-                    domain={[1, 'dataMax']}
-                    ticks={currentMonthTicks}
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#64748b', fontSize: 12 }}
-                  />
-                ) : (
-                  <XAxis 
-                    type="category"
-                    dataKey="date"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#64748b', fontSize: 12 }}
-                    interval={0}
-                  />
-                )}
+                <XAxis 
+                  type="category"
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  interval={chartMode === 'daily' ? 'preserveStartEnd' : 0}
+                />
                 
                 <YAxis 
                   axisLine={false}

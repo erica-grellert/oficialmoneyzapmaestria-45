@@ -1,0 +1,240 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap");
+
+.admin-editorial {
+  --admin-ink: #111827;
+  --admin-ink-soft: #374151;
+  --admin-muted: #64748b;
+  --admin-line: rgba(15, 23, 42, 0.09);
+  --admin-line-strong: rgba(15, 23, 42, 0.16);
+  --admin-paper: #f6f7f9;
+  --admin-paper-elevated: #ffffff;
+  --admin-gold: #eab308;
+  --admin-gold-soft: rgba(234, 179, 8, 0.09);
+  --admin-danger: #c2410c;
+  --admin-success: #3f6212;
+  --admin-shadow: 0 16px 44px rgba(15, 23, 42, 0.06);
+  --admin-radius: 22px;
+  color: var(--admin-ink);
+  background:
+    radial-gradient(circle at top left, rgba(234, 179, 8, 0.045), transparent 28%),
+    radial-gradient(circle at 85% 12%, rgba(15, 23, 42, 0.025), transparent 24%),
+    linear-gradient(180deg, #ffffff 0%, var(--admin-paper) 52%, #f1f3f6 100%);
+  font-family: "IBM Plex Sans", Inter, system-ui, sans-serif;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.admin-editorial::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.08;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+  z-index: 0;
+}
+
+.admin-editorial * {
+  border-color: var(--admin-line);
+}
+
+.admin-editorial .admin-shell {
+  position: relative;
+  z-index: 1;
+}
+
+.admin-editorial .admin-display {
+  font-family: "IBM Plex Sans", Inter, system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.admin-editorial h1,
+.admin-editorial h2,
+.admin-editorial h3,
+.admin-editorial h4 {
+  font-family: "IBM Plex Sans", Inter, system-ui, sans-serif;
+}
+
+.admin-editorial .admin-kicker {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--admin-muted);
+}
+
+.admin-editorial .admin-surface {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--admin-line);
+  border-radius: var(--admin-radius);
+  box-shadow: var(--admin-shadow);
+  backdrop-filter: blur(16px);
+}
+
+.admin-editorial .admin-surface-quiet {
+  background: rgba(248, 250, 252, 0.82);
+  border: 1px solid var(--admin-line);
+  border-radius: calc(var(--admin-radius) - 6px);
+}
+
+.admin-editorial .admin-hairline {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--admin-line-strong),
+    transparent
+  );
+}
+
+.admin-editorial .admin-gold-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(234, 179, 8, 0.22);
+  background: var(--admin-gold-soft);
+  color: #854d0e;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-editorial .admin-nav-item {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  padding: 0.8rem 0.95rem;
+  text-align: left;
+  transition:
+    background 220ms ease,
+    border-color 220ms ease,
+    transform 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.admin-editorial .admin-nav-item:hover {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: var(--admin-line);
+  transform: translateX(2px);
+}
+
+.admin-editorial .admin-nav-item[data-active="true"] {
+  background: var(--admin-paper-elevated);
+  border-color: rgba(234, 179, 8, 0.32);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.admin-editorial .admin-nav-item[data-active="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0.35rem;
+  top: 50%;
+  width: 3px;
+  height: 48%;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: var(--admin-gold);
+}
+
+.admin-editorial .admin-metric-value {
+  font-family: "IBM Plex Sans", Inter, system-ui, sans-serif;
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.admin-editorial .admin-button-ink {
+  background: var(--admin-ink);
+  color: #ffffff;
+  border: 1px solid var(--admin-ink);
+}
+
+.admin-editorial .admin-button-ink:hover {
+  background: var(--admin-ink-soft);
+}
+
+.admin-editorial .admin-button-ghost {
+  background: transparent;
+  border: 1px solid var(--admin-line-strong);
+  color: var(--admin-ink);
+}
+
+.admin-editorial .admin-button-ghost:hover {
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.admin-editorial .admin-user-row {
+  display: grid;
+  gap: 0.85rem;
+  align-items: center;
+  border: 1px solid var(--admin-line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 0.95rem 1rem;
+  transition:
+    transform 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.admin-editorial .admin-user-row:hover {
+  transform: translateY(-1px);
+  border-color: rgba(234, 179, 8, 0.26);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+}
+
+@media (min-width: 768px) {
+  .admin-editorial .admin-user-row {
+    grid-template-columns: minmax(0, 1.4fr) auto auto;
+  }
+}
+
+.admin-editorial .admin-constellation {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.admin-editorial .admin-constellation canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.admin-editorial .admin-constellation-fallback {
+  position: absolute;
+  inset: 8% 10%;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(234, 179, 8, 0.14), transparent 42%),
+    radial-gradient(circle at 70% 55%, rgba(15, 23, 42, 0.06), transparent 38%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent);
+  border: 1px solid rgba(234, 179, 8, 0.12);
+  filter: blur(0.2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-editorial .admin-nav-item,
+  .admin-editorial .admin-user-row,
+  .admin-editorial .admin-button-ink,
+  .admin-editorial .admin-button-ghost {
+    transition: none !important;
+  }
+
+  .admin-editorial .admin-nav-item:hover,
+  .admin-editorial .admin-user-row:hover {
+    transform: none !important;
+  }
+}

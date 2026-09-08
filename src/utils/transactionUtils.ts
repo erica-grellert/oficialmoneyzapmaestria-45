@@ -238,11 +238,89 @@ export const filterTransactionsByTimeRange = (
   }
 };
 
-const isIncome = (type: string) =>
+export const isIncome = (type: string) =>
   String(type).toLowerCase().trim() === "income";
 
-const isExpense = (type: string) =>
+export const isExpense = (type: string) =>
   String(type).toLowerCase().trim() === "expense";
+
+export type TransactionListFilters = {
+  type: "all" | "income" | "expense";
+  category: string | null;
+  dateRange: string | null;
+  amount?: string | null;
+};
+
+export const applyTransactionListFilters = (
+  transactions: Transaction[],
+  filters: TransactionListFilters
+): Transaction[] => {
+  const now = new Date();
+  let rangeStart: Date | null = null;
+  let rangeEnd: Date | null = null;
+
+  if (filters.dateRange) {
+    switch (filters.dateRange) {
+      case "today": {
+        rangeStart = startOfLocalDay(now);
+        rangeEnd = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          59,
+          999
+        );
+        break;
+      }
+      case "week": {
+        rangeStart = startOfLocalDay(now);
+        rangeStart.setDate(rangeStart.getDate() - 6);
+        rangeEnd = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          59,
+          999
+        );
+        break;
+      }
+      case "month": {
+        const bounds = getDashboardPeriodBounds("current-month");
+        rangeStart = bounds.start;
+        rangeEnd = bounds.end;
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  return transactions.filter((transaction) => {
+    if (filters.type === "income" && !isIncome(transaction.type)) return false;
+    if (filters.type === "expense" && !isExpense(transaction.type)) return false;
+
+    if (
+      filters.category &&
+      String(transaction.category).trim() !== filters.category
+    ) {
+      return false;
+    }
+
+    if (
+      rangeStart &&
+      rangeEnd &&
+      !isTransactionInRange(transaction.date, rangeStart, rangeEnd)
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+};
 
 // Calculate total income
 export const calculateTotalIncome = (transactions: Transaction[]): number => {
