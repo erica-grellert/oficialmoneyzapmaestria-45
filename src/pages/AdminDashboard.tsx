@@ -24,8 +24,10 @@ import { AdminOptimizedProvider } from "@/contexts/AdminOptimizedContext";
 import { useAdaptiveContext } from "@/hooks/useAdaptiveContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePrefersReducedMotion } from "@/hooks/useAdminExperience";
-import { logoutConsideringImpersonation } from "@/lib/impersonation";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  getAdminOverviewStats,
+  logoutConsideringImpersonation,
+} from "@/lib/impersonation";
 import { useNavigate } from "react-router-dom";
 import "@/styles/admin-editorial.css";
 
@@ -33,7 +35,7 @@ interface SystemStats {
   activeUsers: number;
   totalTransactions: number;
   activeSubscriptions: number;
-  cancelledSubscriptions: number;
+  nonRenewingSubscriptions: number;
 }
 
 type StatsStatus = "loading" | "ready" | "error";
@@ -42,7 +44,7 @@ const EMPTY_STATS: SystemStats = {
   activeUsers: 0,
   totalTransactions: 0,
   activeSubscriptions: 0,
-  cancelledSubscriptions: 0,
+  nonRenewingSubscriptions: 0,
 };
 
 const AdminDashboard: React.FC = () => {
@@ -82,36 +84,8 @@ const AdminDashboard: React.FC = () => {
       if (manual) setIsRefreshing(true);
       else setStatsStatus("loading");
 
-      const [
-        { count: userCount, error: userError },
-        { count: activeSubscriptionCount, error: activeError },
-        { count: cancelledSubscriptionCount, error: cancelledError },
-        { count: transactionCount, error: transactionError },
-      ] = await Promise.all([
-        supabase.from("moneyzap_users").select("*", { count: "exact", head: true }),
-        supabase
-          .from("moneyzap_subscriptions")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "active"),
-        supabase
-          .from("moneyzap_subscriptions")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "cancelled"),
-        supabase
-          .from("moneyzap_transactions")
-          .select("*", { count: "exact", head: true }),
-      ]);
-
-      if (userError || activeError || cancelledError || transactionError) {
-        throw userError || activeError || cancelledError || transactionError;
-      }
-
-      setSystemStats({
-        activeUsers: userCount || 0,
-        totalTransactions: transactionCount || 0,
-        activeSubscriptions: activeSubscriptionCount || 0,
-        cancelledSubscriptions: cancelledSubscriptionCount || 0,
-      });
+      const stats = await getAdminOverviewStats();
+      setSystemStats(stats);
       setStatsStatus("ready");
     } catch (error) {
       console.error("Error fetching system stats:", error);
@@ -240,10 +214,10 @@ const AdminDashboard: React.FC = () => {
                 </dd>
               </div>
               <div>
-                <dt className="text-[var(--admin-muted)]">Canceladas</dt>
+                <dt className="text-[var(--admin-muted)]">Sem renovação</dt>
                 <dd className="mt-1 font-semibold">
                   {statsStatus === "ready"
-                    ? systemStats.cancelledSubscriptions
+                    ? systemStats.nonRenewingSubscriptions
                     : "—"}
                 </dd>
               </div>
@@ -291,16 +265,16 @@ const AdminDashboard: React.FC = () => {
             tone="gold"
           />
           <AdminMetricCard
-            label="Assinaturas ativas"
+            label="Ativas e renovando"
             value={systemStats.activeSubscriptions}
-            hint="Planos com status ativo"
+            hint="Planos ativos com renovação automática"
             icon={CreditCard}
             loading={statsStatus === "loading"}
           />
           <AdminMetricCard
-            label="Assinaturas canceladas"
-            value={systemStats.cancelledSubscriptions}
-            hint="Planos encerrados"
+            label="Sem renovação"
+            value={systemStats.nonRenewingSubscriptions}
+            hint="Canceladas ou marcadas para encerrar"
             icon={CreditCard}
             loading={statsStatus === "loading"}
             tone="danger"

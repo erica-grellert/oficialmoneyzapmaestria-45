@@ -13,7 +13,7 @@ export interface AdminSystemStats {
   activeUsers: number;
   totalTransactions: number;
   activeSubscriptions: number;
-  cancelledSubscriptions: number;
+  nonRenewingSubscriptions: number;
 }
 
 interface AdminConstellationProps {

@@ -24,6 +24,13 @@ export interface ImpersonationUser {
   canDelete: boolean;
 }
 
+export interface AdminOverviewStats {
+  activeUsers: number;
+  totalTransactions: number;
+  activeSubscriptions: number;
+  nonRenewingSubscriptions: number;
+}
+
 const notify = () => {
   window.dispatchEvent(new Event(CHANGE_EVENT));
 };
@@ -86,7 +93,7 @@ const functionErrorMessage = async (data: unknown, error: unknown) => {
 };
 
 export const listImpersonationUsers = async (): Promise<ImpersonationUser[]> => {
-  const { data, error } = await supabase.functions.invoke("impersonate-user", {
+  const { data, error } = await supabase.functions.invoke("admin-users", {
     body: { action: "list" },
   });
 
@@ -100,8 +107,20 @@ export const listImpersonationUsers = async (): Promise<ImpersonationUser[]> => 
   }));
 };
 
+export const getAdminOverviewStats = async (): Promise<AdminOverviewStats> => {
+  const { data, error } = await supabase.functions.invoke(
+    "admin-overview-stats"
+  );
+
+  if (error || data?.error || !data?.stats) {
+    throw new Error(await functionErrorMessage(data, error));
+  }
+
+  return data.stats as AdminOverviewStats;
+};
+
 export const deleteUserCompletely = async (userId: string) => {
-  const { data, error } = await supabase.functions.invoke("impersonate-user", {
+  const { data, error } = await supabase.functions.invoke("admin-users", {
     body: { action: "delete", userId },
   });
 
@@ -122,7 +141,7 @@ export const startImpersonation = async (userId: string) => {
   }
 
   const { data, error } = await supabase.functions.invoke("impersonate-user", {
-    body: { action: "start", userId },
+    body: { userId },
   });
 
   if (error) {
