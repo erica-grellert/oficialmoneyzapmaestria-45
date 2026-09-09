@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AdminProfileConfig from "@/components/admin/AdminProfileConfig";
+import AdminSubscriptionsManager from "@/components/admin/AdminSubscriptionsManager";
 import UserImpersonationManager from "@/components/admin/UserImpersonationManager";
 import AdminConstellation from "@/components/admin/experience/AdminConstellation";
 import AdminMetricCard from "@/components/admin/experience/AdminMetricCard";
@@ -174,6 +175,15 @@ const AdminDashboard: React.FC = () => {
                 type="button"
                 variant="outline"
                 className="admin-button-ghost rounded-xl"
+                onClick={() => selectWorkspace("subscriptions")}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Abrir assinaturas
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="admin-button-ghost rounded-xl"
                 onClick={() => void fetchSystemStats(true)}
                 disabled={isRefreshing}
               >
@@ -291,6 +301,7 @@ const AdminDashboard: React.FC = () => {
   const renderWorkspace = (workspaceId: AdminWorkspaceId) => {
     if (workspaceId === "overview") return renderOverview();
     if (workspaceId === "users") return <UserImpersonationManager />;
+    if (workspaceId === "subscriptions") return <AdminSubscriptionsManager />;
     if (workspaceId === "profile") {
       return (
         <section className="space-y-5">

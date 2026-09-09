@@ -199,6 +199,30 @@
   .admin-editorial .admin-user-row {
     grid-template-columns: minmax(0, 1.4fr) auto auto;
   }
+
+  .admin-editorial .admin-subscription-row {
+    grid-template-columns: minmax(0, 1.6fr) auto;
+  }
+}
+
+.admin-editorial .admin-subscription-row {
+  display: grid;
+  gap: 0.85rem;
+  align-items: center;
+  border: 1px solid var(--admin-line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 0.95rem 1rem;
+  transition:
+    transform 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.admin-editorial .admin-subscription-row:hover {
+  transform: translateY(-1px);
+  border-color: rgba(234, 179, 8, 0.26);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
 }
 
 .admin-editorial .admin-constellation {
@@ -228,13 +252,15 @@
 @media (prefers-reduced-motion: reduce) {
   .admin-editorial .admin-nav-item,
   .admin-editorial .admin-user-row,
+  .admin-editorial .admin-subscription-row,
   .admin-editorial .admin-button-ink,
   .admin-editorial .admin-button-ghost {
     transition: none !important;
   }
 
   .admin-editorial .admin-nav-item:hover,
-  .admin-editorial .admin-user-row:hover {
+  .admin-editorial .admin-user-row:hover,
+  .admin-editorial .admin-subscription-row:hover {
     transform: none !important;
   }
 }

@@ -7,6 +7,7 @@ import {
   Gift,
   Palette,
   Phone,
+  Repeat,
   Send,
   Users,
 } from "lucide-react";
@@ -20,6 +21,7 @@ import MassMessageManager from "../MassMessageManager";
 export type AdminWorkspaceId =
   | "overview"
   | "users"
+  | "subscriptions"
   | "branding"
   | "stripe"
   | "pricing"
@@ -50,6 +52,13 @@ export const ADMIN_WORKSPACES: AdminWorkspaceItem[] = [
     label: "Usuários",
     description: "Impersonação, busca e exclusão segura",
     icon: Users,
+    group: "principal",
+  },
+  {
+    id: "subscriptions",
+    label: "Assinaturas",
+    description: "Planos, status e renovação de cada conta",
+    icon: Repeat,
     group: "principal",
   },
   {

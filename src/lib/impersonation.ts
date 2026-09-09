@@ -31,6 +31,28 @@ export interface AdminOverviewStats {
   nonRenewingSubscriptions: number;
 }
 
+export interface AdminSubscriptionUser {
+  id: string;
+  name: string | null;
+  email: string;
+  phone: string | null;
+}
+
+export interface AdminSubscription {
+  id: string;
+  user_id: string | null;
+  status: string;
+  plan_type: string;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean | null;
+  stripe_subscription_id: string | null;
+  stripe_customer_id: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  user: AdminSubscriptionUser | null;
+}
+
 const notify = () => {
   window.dispatchEvent(new Event(CHANGE_EVENT));
 };
@@ -117,6 +139,20 @@ export const getAdminOverviewStats = async (): Promise<AdminOverviewStats> => {
   }
 
   return data.stats as AdminOverviewStats;
+};
+
+export const listAdminSubscriptions = async (): Promise<
+  AdminSubscription[]
+> => {
+  const { data, error } = await supabase.functions.invoke(
+    "admin-subscriptions"
+  );
+
+  if (error || data?.error) {
+    throw new Error(await functionErrorMessage(data, error));
+  }
+
+  return (data?.subscriptions ?? []) as AdminSubscription[];
 };
 
 export const deleteUserCompletely = async (userId: string) => {
