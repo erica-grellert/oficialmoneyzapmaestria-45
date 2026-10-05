@@ -9,10 +9,10 @@ import { useSubscription } from '@/contexts/SubscriptionContext';
 const ManageSubscriptionButton: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { hasActiveSubscription } = useSubscription();
+  const { canManageSubscription } = useSubscription();
 
-  // Só mostra o botão se houver assinatura ativa
-  if (!hasActiveSubscription) {
+  // Pagando, em teste ou em atraso podem abrir o portal para cobrar ou regularizar.
+  if (!canManageSubscription) {
     return null;
   }
 

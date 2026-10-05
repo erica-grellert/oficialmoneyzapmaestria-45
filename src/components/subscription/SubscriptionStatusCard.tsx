@@ -9,20 +9,23 @@ import { format } from 'date-fns';
 import { ptBR, enUS } from 'date-fns/locale';
 
 const SubscriptionStatusCard: React.FC = () => {
-  const { subscription, hasActiveSubscription, isSubscriptionExpiring, isSubscriptionExpired } = useSubscription();
+  const { subscription, hasActiveSubscription, accessState, isSubscriptionExpiring, isSubscriptionExpired } = useSubscription();
   const { t, language } = usePreferences();
   
   const locale = language === 'pt' ? ptBR : enUS;
 
   const getStatusVariant = () => {
-    if (isSubscriptionExpired) return 'destructive';
+    if (accessState === 'delinquent' || isSubscriptionExpired) return 'destructive';
     if (!hasActiveSubscription) return 'destructive';
+    if (accessState === 'trialing') return 'outline';
     if (isSubscriptionExpiring) return 'outline';
     return 'success';
   };
 
   const getStatusText = () => {
+    if (accessState === 'delinquent') return t('plans.status.delinquent');
     if (isSubscriptionExpired) return 'Plano Vencido';
+    if (accessState === 'trialing') return t('plans.status.trialing');
     if (!hasActiveSubscription) return t('plans.status.inactive');
     if (isSubscriptionExpiring) return t('plans.status.expiring');
     return t('plans.status.active');

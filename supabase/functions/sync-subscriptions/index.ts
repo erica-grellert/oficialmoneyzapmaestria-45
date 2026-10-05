@@ -66,10 +66,11 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Buscar assinaturas ativas no Stripe (filtradas por email se fornecido)
-    let subscriptions;
+    // Pagando, em teste e em atraso. Canceladas ficam de fora deste sync.
+    const statusesToSync = ["active", "trialing", "past_due", "unpaid"] as const;
+    let customerId: string | undefined;
+
     if (email) {
-      // Buscar customer específico por email
       const customers = await stripe.customers.list({
         email: email,
         limit: 1,
@@ -89,22 +90,25 @@ serve(async (req) => {
         );
       }
 
-      // Buscar assinaturas do customer específico
-      subscriptions = await stripe.subscriptions.list({
-        customer: customers.data[0].id,
-        status: "active",
-        limit: 10,
-      });
-    } else {
-      // Buscar todas as assinaturas ativas
-      subscriptions = await stripe.subscriptions.list({
-        status: "active",
-        limit: 100,
-      });
+      customerId = customers.data[0].id;
     }
 
-    logStep("Found active subscriptions", {
+    const lists = await Promise.all(
+      statusesToSync.map((status) =>
+        stripe.subscriptions.list({
+          status,
+          limit: customerId ? 10 : 100,
+          ...(customerId ? { customer: customerId } : {}),
+        })
+      )
+    );
+    const subscriptions = {
+      data: lists.flatMap((list) => list.data),
+    };
+
+    logStep("Found subscriptions", {
       count: subscriptions.data.length,
+      statuses: statusesToSync,
       filteredByEmail: !!email,
     });
 

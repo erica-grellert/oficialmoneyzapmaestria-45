@@ -1,5 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  getSubscriptionAccessState,
+  hasSubscriptionAccess,
+  isPeriodExpired,
+  pickSubscription,
+} from "../_shared/subscription-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -81,14 +87,14 @@ serve(async (req) => {
       throw new Error("User not found - email or valid token required");
     }
 
-    // Buscar assinatura do usuário usando service role
-    const { data: subscription, error: subscriptionError } =
+    // Buscar assinaturas do usuário. O acesso não depende só de status "active":
+    // trialing também entra, past_due e unpaid ficam sem acesso.
+    const { data: subscriptions, error: subscriptionError } =
       await supabaseService
         .from("moneyzap_subscriptions")
         .select("*")
         .eq("user_id", user.id)
-        .eq("status", "active")
-        .single();
+        .order("updated_at", { ascending: false });
 
     if (subscriptionError && subscriptionError.code !== "PGRST116") {
       logStep("Error fetching subscription", { error: subscriptionError });
@@ -97,17 +103,23 @@ serve(async (req) => {
       );
     }
 
-    const hasActiveSubscription = !!subscription;
-    const isExpired = subscription?.current_period_end
-      ? new Date() > new Date(subscription.current_period_end)
-      : false;
-
-    const isActiveAndNotExpired = hasActiveSubscription && !isExpired;
+    const subscription = pickSubscription(subscriptions ?? []);
+    const accessState = getSubscriptionAccessState(
+      subscription?.status,
+      subscription?.current_period_end
+    );
+    const isExpired = isPeriodExpired(subscription?.current_period_end);
+    const isActiveAndNotExpired = hasSubscriptionAccess(
+      subscription?.status,
+      subscription?.current_period_end
+    );
 
     logStep("Subscription check completed", {
-      hasSubscription: hasActiveSubscription,
+      hasSubscription: isActiveAndNotExpired,
+      accessState,
       isExpired,
       isActiveAndNotExpired,
+      status: subscription?.status,
       planType: subscription?.plan_type,
       currentPeriodEnd: subscription?.current_period_end,
       userLookupMethod,
@@ -116,6 +128,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         hasActiveSubscription: isActiveAndNotExpired,
+        accessState,
         subscription: subscription || null,
         isExpired,
         exists: true,

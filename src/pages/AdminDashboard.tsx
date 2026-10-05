@@ -36,6 +36,8 @@ interface SystemStats {
   activeUsers: number;
   totalTransactions: number;
   activeSubscriptions: number;
+  trialingSubscriptions: number;
+  delinquentSubscriptions: number;
   nonRenewingSubscriptions: number;
 }
 
@@ -45,6 +47,8 @@ const EMPTY_STATS: SystemStats = {
   activeUsers: 0,
   totalTransactions: 0,
   activeSubscriptions: 0,
+  trialingSubscriptions: 0,
+  delinquentSubscriptions: 0,
   nonRenewingSubscriptions: 0,
 };
 
@@ -86,7 +90,12 @@ const AdminDashboard: React.FC = () => {
       else setStatsStatus("loading");
 
       const stats = await getAdminOverviewStats();
-      setSystemStats(stats);
+      setSystemStats({
+        ...EMPTY_STATS,
+        ...stats,
+        trialingSubscriptions: stats.trialingSubscriptions ?? 0,
+        delinquentSubscriptions: stats.delinquentSubscriptions ?? 0,
+      });
       setStatsStatus("ready");
     } catch (error) {
       console.error("Error fetching system stats:", error);
@@ -216,10 +225,26 @@ const AdminDashboard: React.FC = () => {
                 </dd>
               </div>
               <div>
-                <dt className="text-[var(--admin-muted)]">Ativas</dt>
+                <dt className="text-[var(--admin-muted)]">Pagando</dt>
                 <dd className="mt-1 font-semibold">
                   {statsStatus === "ready"
                     ? systemStats.activeSubscriptions
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--admin-muted)]">Em teste</dt>
+                <dd className="mt-1 font-semibold">
+                  {statsStatus === "ready"
+                    ? systemStats.trialingSubscriptions
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--admin-muted)]">Em atraso</dt>
+                <dd className="mt-1 font-semibold">
+                  {statsStatus === "ready"
+                    ? systemStats.delinquentSubscriptions
                     : "—"}
                 </dd>
               </div>
@@ -257,7 +282,7 @@ const AdminDashboard: React.FC = () => {
       ) : (
         <div
           data-admin-reveal
-          className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
+          className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
         >
           <AdminMetricCard
             label="Usuários"
@@ -275,11 +300,27 @@ const AdminDashboard: React.FC = () => {
             tone="gold"
           />
           <AdminMetricCard
-            label="Ativas e renovando"
+            label="Pagando"
             value={systemStats.activeSubscriptions}
-            hint="Planos ativos com renovação automática"
+            hint="Assinaturas ativas com renovação automática"
             icon={CreditCard}
             loading={statsStatus === "loading"}
+          />
+          <AdminMetricCard
+            label="Em teste"
+            value={systemStats.trialingSubscriptions}
+            hint="Período de teste com acesso liberado"
+            icon={CreditCard}
+            loading={statsStatus === "loading"}
+            tone="gold"
+          />
+          <AdminMetricCard
+            label="Em atraso"
+            value={systemStats.delinquentSubscriptions}
+            hint="Pagamento falhou e o acesso está bloqueado"
+            icon={CreditCard}
+            loading={statsStatus === "loading"}
+            tone="danger"
           />
           <AdminMetricCard
             label="Sem renovação"

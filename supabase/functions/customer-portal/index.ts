@@ -1,5 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  canManageBilling,
+  pickSubscription,
+} from "../_shared/subscription-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -73,18 +77,21 @@ serve(async (req) => {
 
     console.log("Stripe configuration loaded successfully");
 
-    // Query subscription with status check
-    const { data: subscription, error: subError } = await supabaseClient
+    // Pagando, em teste e em atraso podem abrir o portal. Cancelada não.
+    const { data: subscriptions, error: subError } = await supabaseClient
       .from("moneyzap_subscriptions")
-      .select("stripe_customer_id, status, plan_type")
+      .select("stripe_customer_id, status, plan_type, current_period_end")
       .eq("user_id", user.id)
-      .eq("status", "active")
-      .maybeSingle();
+      .order("updated_at", { ascending: false });
 
     if (subError) {
       console.error("Subscription query error:", subError);
       throw new Error(`Database error: ${subError.message}`);
     }
+
+    const subscription = pickSubscription(
+      (subscriptions ?? []).filter((row) => canManageBilling(row.status))
+    );
 
     if (!subscription?.stripe_customer_id) {
       console.log("No active subscription found for user");

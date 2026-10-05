@@ -50,17 +50,32 @@ serve(async (req: Request) => {
       current_period_end: string | null;
     }>;
 
-    const activeSubscriptionCount = subscriptionRows.filter((subscription) => {
-      const periodIsCurrent =
-        !subscription.current_period_end ||
-        new Date(subscription.current_period_end).getTime() > now;
+    const periodIsCurrent = (subscription: {
+      current_period_end: string | null;
+    }) =>
+      !subscription.current_period_end ||
+      new Date(subscription.current_period_end).getTime() > now;
 
+    const activeSubscriptionCount = subscriptionRows.filter((subscription) => {
       return (
-        subscription.status === "active" &&
+        subscription.status.toLowerCase() === "active" &&
         !subscription.cancel_at_period_end &&
-        periodIsCurrent
+        periodIsCurrent(subscription)
       );
     }).length;
+
+    const trialingSubscriptionCount = subscriptionRows.filter(
+      (subscription) =>
+        subscription.status.toLowerCase() === "trialing" &&
+        periodIsCurrent(subscription)
+    ).length;
+
+    const delinquentSubscriptionCount = subscriptionRows.filter(
+      (subscription) => {
+        const normalizedStatus = subscription.status.toLowerCase();
+        return normalizedStatus === "past_due" || normalizedStatus === "unpaid";
+      }
+    ).length;
 
     const nonRenewingSubscriptionCount = subscriptionRows.filter(
       (subscription) => {
@@ -83,6 +98,8 @@ serve(async (req: Request) => {
         activeUsers: userCount || 0,
         totalTransactions: transactionCount || 0,
         activeSubscriptions: activeSubscriptionCount,
+        trialingSubscriptions: trialingSubscriptionCount,
+        delinquentSubscriptions: delinquentSubscriptionCount,
         nonRenewingSubscriptions: nonRenewingSubscriptionCount,
       },
     });

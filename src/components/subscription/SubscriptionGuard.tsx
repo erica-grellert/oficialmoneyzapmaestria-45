@@ -9,6 +9,10 @@ import {
   hasActiveReferralBonus,
   getReferralBonusExpiry,
 } from "@/services/referralService";
+import {
+  getSubscriptionAccessState,
+  isPeriodExpired,
+} from "@/lib/subscriptionAccess";
 
 interface SubscriptionGuardProps {
   children: React.ReactNode;
@@ -148,7 +152,13 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
       return false;
     }
 
-    if (subscription.status !== "active") {
+    const accessState = getSubscriptionAccessState(
+      subscription.status,
+      subscription.current_period_end
+    );
+
+    // Pagando e em teste entram. Em atraso, cancelada ou vencida ficam de fora.
+    if (accessState !== "paying" && accessState !== "trialing") {
       return false;
     }
 
@@ -157,15 +167,8 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
       return true;
     }
 
-    // Verificar se current_period_end existe e se a data atual está dentro do período
-    if (subscription.current_period_end) {
-      const currentDate = new Date();
-      const periodEndDate = new Date(subscription.current_period_end);
-
-      // Se a data atual for maior que a data de fim do período, a assinatura expirou
-      if (currentDate > periodEndDate) {
-        return false;
-      }
+    if (isPeriodExpired(subscription.current_period_end)) {
+      return false;
     }
 
     return true;
@@ -191,9 +194,16 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground">
-              {!subscription || subscription.status !== "active"
-                ? `Para acessar ${feature}, você precisa de uma assinatura ativa do Meu Controle IA.`
-                : `Sua assinatura expirou. Para continuar acessando ${feature}, você precisa renovar sua assinatura.`}
+              {subscription &&
+              getSubscriptionAccessState(
+                subscription.status,
+                subscription.current_period_end
+              ) === "delinquent"
+                ? `Sua assinatura está em atraso. Regularize o pagamento para voltar a acessar ${feature}.`
+                : !subscription ||
+                    !isPeriodExpired(subscription.current_period_end)
+                  ? `Para acessar ${feature}, você precisa de uma assinatura ativa do Meu Controle IA.`
+                  : `Sua assinatura expirou. Para continuar acessando ${feature}, você precisa renovar sua assinatura.`}
             </p>
             {isWithinGracePeriod && (
               <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg">

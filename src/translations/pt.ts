@@ -142,6 +142,8 @@ export default {
     expiresOn: "Expira em",
     status: {
       active: "Ativo",
+      trialing: "Em teste",
+      delinquent: "Em atraso",
       inactive: "Inativo",
       expired: "Expirado",
       expiring: "Expirando em breve",

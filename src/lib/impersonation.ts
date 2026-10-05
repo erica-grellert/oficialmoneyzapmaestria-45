@@ -28,6 +28,8 @@ export interface AdminOverviewStats {
   activeUsers: number;
   totalTransactions: number;
   activeSubscriptions: number;
+  trialingSubscriptions: number;
+  delinquentSubscriptions: number;
   nonRenewingSubscriptions: number;
 }
 

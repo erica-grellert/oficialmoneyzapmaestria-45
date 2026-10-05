@@ -16,7 +16,7 @@ const PlansPage = () => {
   const navigate = useNavigate();
   const { t } = usePreferences();
   const { toast } = useToast();
-  const { hasActiveSubscription } = useSubscription();
+  const { canManageSubscription } = useSubscription();
   const { config, isLoading: configLoading } = usePlanConfig();
 
   const success = searchParams.get("success");
@@ -125,7 +125,7 @@ const PlansPage = () => {
         </div>
 
         {/* Manage Subscription Section */}
-        {hasActiveSubscription && (
+        {canManageSubscription && (
           <div className="text-center space-y-4">
             <h3 className="text-lg font-semibold">
               {t("plans.manageSubscription")}

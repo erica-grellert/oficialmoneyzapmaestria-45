@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import {
+  canManageBilling,
+  getSubscriptionAccessState,
+  isPeriodExpired,
+  type SubscriptionAccessState,
+} from "@/lib/subscriptionAccess";
 
 interface Subscription {
   id: string;
@@ -15,6 +21,8 @@ interface SubscriptionContextType {
   isLoading: boolean;
   checkSubscription: () => Promise<void>;
   hasActiveSubscription: boolean;
+  accessState: SubscriptionAccessState;
+  canManageSubscription: boolean;
   isSubscriptionExpiring: boolean;
   isSubscriptionExpired: boolean; // Nova propriedade para verificar se está expirado
 }
@@ -78,13 +86,18 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   // Verifica se a assinatura está expirada (data atual é posterior à data de expiração)
-  const isSubscriptionExpired = subscription?.current_period_end
-    ? new Date() > new Date(subscription.current_period_end)
-    : false;
+  const isSubscriptionExpired = isPeriodExpired(subscription?.current_period_end);
 
-  // Modifica a verificação de assinatura ativa para considerar também a data de expiração
+  const accessState = getSubscriptionAccessState(
+    subscription?.status,
+    subscription?.current_period_end
+  );
+
+  // Pagando (active) e em teste (trialing) têm acesso. Em atraso, cancelada ou vencida não.
   const hasActiveSubscription =
-    subscription?.status === "active" && !isSubscriptionExpired;
+    accessState === "paying" || accessState === "trialing";
+
+  const canManageSubscription = canManageBilling(subscription?.status);
 
   // Verifica se a assinatura está expirando nos próximos 7 dias
   const isSubscriptionExpiring = subscription?.current_period_end
@@ -117,6 +130,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
         isLoading,
         checkSubscription,
         hasActiveSubscription,
+        accessState,
+        canManageSubscription,
         isSubscriptionExpiring,
         isSubscriptionExpired,
       }}
